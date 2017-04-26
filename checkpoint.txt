@@ -1,0 +1,15 @@
+Progress so far
+
+After deeper exploration on the topic, we found that it is actually hard to use SIMD to implement parallel scans and filters for columnar data store. The reason is the skiplist structure provides no means for measuring the scan size, so it is hard to create multiple scanning threads with equal workload. Furthermore, the skiplist has poor data locality because of use of linked list. So currently, we are planning to change our topic to implement a parallelized skip list. This skip list will separate the storage layer (the bottom layer in skip list) and the index layer (nodes at higher level). The benefit of this design is
+1. Before we have to implement a lock free skiplist, but now we only consider the storage layer which is a single linked list. Implementing a lock free linked list is much more easier.
+2. Now we can group together nodes at the same level in the index layer. For example, before we have 4 index nodes 1->3->5->7, now we group this 4 indexes together as 1,3,5,7. This enables us to use SIMD instructions to do comparison with the target key. Suppose the target key is 6, before we need to do 4 iterations of comparisons to actually find out the key falls under the range of 5->7, now we can use a single iteration to find out the range. This brings a 4x speedup in the routing stage, plus potential benefits brought by data locality.
+
+
+Now we have implemented the lock-free linked list and are designing the rest of the skiplist. The problems we have are:
+1. For the index layer, our current design is in order to prevent read write conflict, we should only update it when there have been a certain number of inserts/deletes. This could lead to potential performance issues, since if index is not updated, the worst case for finding a key would be O(n).
+2. Although the index layer and storage layer look like separated, updating the node in storage layer still requires some update in the index layer. For example, if in index layer an index 3 points to the storage node with key 3, but if the latter one is deleted and the index layer is not updated yet, the pointer for the previous one still needs to be updated or memory leakage will happen.
+
+Updated schedule:
+
+4.26~5.4 Implementing the index layer of skip list
+5.5~5.11 Performance tuning, profiling and bug fix
