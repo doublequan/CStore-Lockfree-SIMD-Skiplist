@@ -16,7 +16,7 @@ struct struct_node {
     // key of node
     T key;
     // whether this storage node is the starting node pointed to from the upper index layer
-    bool is_start_node = false;
+    bool is_start_node;
     // height of index for this node. 0 for no index.
     int height;
 } Node;
