@@ -40,7 +40,7 @@ public:
 
         double time = single_run(threads, thread_num, f, ptr);
 
-        printf("This run cost : %.3fs", time);
+        printf("This run cost : %.3fs\n", time);
     }
 
     void run3x(int thread_num, func_t f, void *ptr) {
@@ -51,7 +51,7 @@ public:
             time_sum += single_run(threads, thread_num, f, ptr);
         }
 
-        printf("This run cost : %.3fs", time_sum / 3);
+        printf("This run cost : %.3fs\n", time_sum / 3);
     }
 
     void run10x(int thread_num, func_t f, void *ptr) {
@@ -62,7 +62,7 @@ public:
             time_sum += single_run(threads, thread_num, f, ptr);
         }
 
-        printf("This run cost : %.3fs", time_sum / 10);
+        printf("This run cost : %.3fs\n", time_sum / 10);
     }
 
 

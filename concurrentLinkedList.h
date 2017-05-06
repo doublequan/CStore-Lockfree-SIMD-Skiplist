@@ -14,6 +14,11 @@ public:
     bool is_deleted;;
 
     Node(T t) : data(t), next(NULL), is_deleted(false) {}
+
+    void to_string() {
+        printf("%d", data);
+        if (is_deleted) printf(":d");
+    }
 };
 
 
@@ -38,11 +43,12 @@ public:
     void insert(Node<T> *p, Node<T> *n) {
         if (p == NULL || n == NULL) return;
         while (1) {
-            n->next = p->next;
             Node<T> *old_next = p->next;
-            if (__sync_val_compare_and_swap(&p->next, old_next, n) == old_next)
+            n->next = old_next;
+            if (__sync_val_compare_and_swap(&p->next, old_next, n) == old_next) {
                 modifcation_num++;
-            return;
+                return;
+            }
         }
     }
 
@@ -97,6 +103,21 @@ public:
         }
 
         gc_lock.unlock();
+    }
+
+    /**
+     * Non-thread-safe
+     */
+    int to_string() {
+        Node<T> *cur = head;
+        int count = 0;
+        while (cur->next != NULL) {
+            cur->to_string();
+            printf("\n");
+            cur = cur->next;
+            count++;
+        }
+        return count;
     }
 
 
