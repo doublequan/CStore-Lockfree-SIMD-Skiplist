@@ -7,13 +7,15 @@
 #include <mutex>
 
 template<typename T>
-typedef
-struct struct_node {
-    struct_node() : data(NULL), next(NULL), is_deleted(false) {};
-    T *data;
-    struct_node *next;
-    bool is_deleted;
-} Node;
+class Node {
+public:
+    T data;
+    Node *next;
+    bool is_deleted;;
+
+    Node(T t) : data(t), next(NULL), is_deleted(false) {}
+};
+
 
 template<class T>
 class ConcurrentLinkedList {
@@ -24,7 +26,7 @@ public:
     std::mutex gc_lock;
 
     ConcurrentLinkedList() {
-        head = (Node<T> *)malloc(sizeof(Node));
+        head = new Node<T>(0);
     }
 
     /**
@@ -33,14 +35,14 @@ public:
      * @param n
      * @return
      */
-    void insert(Node *p, Node *n) {
+    void insert(Node<T> *p, Node<T> *n) {
         if (p == NULL || n == NULL) return;
         while (1) {
             n->next = p->next;
-            Node *old_next = p->next;
+            Node<T> *old_next = p->next;
             if (__sync_val_compare_and_swap(&p->next, old_next, n) == old_next)
                 modifcation_num++;
-                return;
+            return;
         }
     }
 
@@ -49,7 +51,7 @@ public:
      * Here we mark it as deleted, it will be deleted by the GC later
      * @param n
      */
-    void remove(Node *n) {
+    void remove(Node<T> *n) {
         if (n == NULL) return;
         n->is_deleted = true;
         modifcation_num++;
@@ -63,12 +65,12 @@ public:
      * @param t
      * @return
      */
-    Node *search_from(Node *p, T t) {
+    Node<T> *search_from(Node<T> *p, T t) {
         if (p == NULL) return NULL;
 
         if (p->data == t && !p->is_deleted) return p;
 
-        Node *cur = p;
+        Node<T> *cur = p;
         while (cur->next != NULL && cur->next->data <= t) {
             cur = cur->next;
             if (cur->data == t && !cur->is_deleted) return cur;
@@ -83,10 +85,10 @@ public:
     void garbage_collect() {
         gc_lock.lock();
 
-        Node *cur = head;
+        Node<T> *cur = head;
         while (cur->next != NULL) {
             if (cur->next->is_deleted) {
-                Node *tmp = cur->next;
+                Node<T> *tmp = cur->next;
                 cur->next = cur->next->next;
                 free(tmp);
             } else {
@@ -96,6 +98,8 @@ public:
 
         gc_lock.unlock();
     }
+
+
 };
 
 #endif //CLION_LOCKFREE_LIST_H
