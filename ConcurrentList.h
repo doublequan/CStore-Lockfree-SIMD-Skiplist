@@ -5,30 +5,29 @@
 #include <unistd.h>
 #include <atomic>
 #include <mutex>
-#include "ConcurrentSortedLinkedList.h"
 
 
-#define set_is_delete(address) ((Node<T>*)((uintptr_t)address | 1))
-#define set_confirm_delete(address) ((Node<T>*)((uintptr_t)address | 2))
+#define set_is_delete(address) ((Node *)((uintptr_t)address | 1))
+#define set_confirm_delete(address) ((Node *)((uintptr_t)address | 2))
 #define get_is_delete(address) ((int)((uintptr_t)address & 0x00000001))
 #define get_confirm_delete(address) ((int)((uintptr_t)address & 0x00000002) == 2 ?1:0)
-#define get_node_address(address) ((Node<T>*)((uintptr_t)address & -4))
+#define get_node_address(address) ((Node *)((uintptr_t)address & -4))
 
 
-template<typename T>
+
 class Node {
 public:
-    T data;
-    Node<T> *next;
+    int data;
+    Node *next;
 
-    Node(T t) : data(t), next(NULL) {}
+    Node(int t) : data(t), next(NULL) {}
 
     void to_string() {
         printf("%d", data);
     }
 
     // key of node
-    T key;
+    int key;
     // whether this storage node is the starting node pointed to from the upper index layer
     bool is_start_node = false;
     // height of index for this node. 0 for no index.
@@ -36,16 +35,15 @@ public:
 };
 
 
-template<typename T>
 class lockfreeList {
 public:
 
-    Node<T> *head;
-    Node<T> *tail;
+    Node *head;
+    Node *tail;
 
     lockfreeList() {
-        head = new Node<T>(NULL);
-        tail = new Node<T>(NULL);
+        head = new Node(NULL);
+        tail = new Node(NULL);
         head->next = tail;
     }
 
@@ -54,8 +52,8 @@ public:
     }
 
     void insert(int value) {
-        Node<T> *new_node = new Node<T>(value);
-        Node<T> *right_node, *left_node;
+        Node *new_node = new Node(value);
+        Node *right_node, *left_node;
 
         while (true) {
             right_node = search_from(head, value, left_node);
@@ -74,13 +72,13 @@ public:
      * @param left_node
      * @return
      */
-    Node<T> *search_from(Node<T> *start_node, int value, Node<T> *&left_node) {
-        Node<T> *left_node_next, *right_node;
+    Node *search_from(Node *start_node, int value, Node *&left_node) {
+        Node *left_node_next, *right_node;
 
         SEARCH_AGAIN:
         do {
-            Node<T> *t = start_node;
-            Node<T> *t_next = start_node->next;
+            Node *t = start_node;
+            Node *t_next = start_node->next;
             /* Find left and right node */
             do {
                 if (!get_is_delete(t_next)) {
@@ -115,7 +113,7 @@ public:
     }
 
     void remove(int value) {
-        Node<T> *right_node = NULL, *right_node_next = NULL, *left_node = NULL;
+        Node *right_node = NULL, *right_node_next = NULL, *left_node = NULL;
         while (true) {
             right_node = search_from(head, value, left_node);
             if ((right_node == tail) || (right_node->data != value)) {
@@ -135,7 +133,7 @@ public:
     }
 
     bool find(int value) {
-        Node<T> *right_node, *left_node;
+        Node *right_node, *left_node;
         right_node = search_from(head, value, left_node);
         if ((right_node == tail) || (right_node->data != value)) return false;
         else return true;
@@ -146,7 +144,7 @@ public:
      * Non-thread-safe
      */
     int to_string() {
-        Node<T> *cur = head;
+        Node *cur = head;
         int count = 0;
         while (cur->next != tail) {
             cur->next->to_string();
