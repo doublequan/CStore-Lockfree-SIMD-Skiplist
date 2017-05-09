@@ -24,23 +24,21 @@
 #define get_is_delete(address) ((int)((uintptr_t)address & 0x00000001))
 #define get_confirm_delete(address) ((int)((uintptr_t)address & 0x00000002) == 2 ?1:0)
 #define get_node_address(address) ((Node *)((uintptr_t)address & -4))
+#define get_node_address_ignore_last_digit(address) ((Node *)((uintptr_t)address & -2))
 
 
 class Node {
 public:
-    int data;
+    int key;
+    int value;
     Node *next;
 
-    Node(int t) : data(t), next(NULL) {}
+    Node(int k, int v) : key(k), value(v), next(NULL) {}
 
     void to_string() {
-        printf("%d", data);
+        printf("%d", key);
     }
 
-    // key of node
-    int key;
-    // whether this storage node is the starting node pointed to from the upper index layer
-    bool is_start_node = false;
     // height of index for this node. 0 for no index.
     int height;
 };
@@ -53,8 +51,8 @@ public:
     Node *tail;
 
     lockfreeList() {
-        head = new Node(NULL);
-        tail = new Node(NULL);
+        head = new Node(NULL, NULL);
+        tail = new Node(NULL, NULL);
         head->next = tail;
     }
 
@@ -62,16 +60,22 @@ public:
 
     }
 
-    void insert(int value) {
-        Node *new_node = new Node(value);
+    void insert(int key, int value) {
+        Node *new_node = new Node(key, value);
         Node *right_node, *left_node;
 
         while (true) {
-            right_node = search_after(head, value, left_node);
-            if ((right_node != tail) && (right_node->data == value))
+            right_node = search_after(head, key, left_node);
+            if ((get_node_address(right_node) != tail) && !get_is_delete(get_node_address(right_node)->next)
+                && (get_node_address(right_node)->key == key))
                 return; //false;
-            new_node->next = right_node;
-            if (__sync_bool_compare_and_swap(&left_node->next, right_node, new_node))
+            get_node_address(new_node)->next = get_node_address(right_node);
+            if (get_is_delete(get_node_address(left_node)->next)) {
+                new_node = set_is_delete(new_node);
+            } else {
+                new_node = get_node_address(new_node);
+            }
+            if (__sync_bool_compare_and_swap(&get_node_address(left_node)->next, right_node, new_node))
                 return;// true;
         }
     }
@@ -80,11 +84,11 @@ public:
      * Search value in the list from start_node (exclusive).
      * Find right and left node such that value is in (left_node.data, right_node.data]
      * return the right node and put left node point in parameter left_node
-     * @param value
+     * @param key
      * @param left_node
      * @return
      */
-    Node *search_after(Node *start_node, int value, Node *&left_node) {
+    Node *search_after(Node *start_node, int key, Node *&left_node) {
         Node *left_node_next, *right_node;
 
         SEARCH_AGAIN:
@@ -93,28 +97,30 @@ public:
             Node *t_next = start_node->next;
             /* Find left and right node */
             do {
-                if (!get_is_delete(t_next)) {
+                if (!get_confirm_delete(t_next)) {
                     (left_node) = t;
                     left_node_next = t_next;
                 }
-                t = get_node_address(t_next);
+//                t = get_node_address(t_next);
+                t = t_next;
 
-                if (t == tail) break;
-                t_next = t->next;
+                if (get_node_address(t) == tail) break;
+                t_next = get_node_address(t)->next;
 
-            } while (get_is_delete(t_next) || t->data < value);
+            } while (get_confirm_delete(t_next) || get_node_address(t)->key < key);
+
             right_node = t;
 
             /* Check nodes are adjacent */
-            if (left_node_next == right_node) {
-                if ((right_node != tail) && get_is_delete(right_node->next)) {
+            if (get_node_address(left_node_next) == get_node_address(right_node)) {
+                if ((get_node_address(right_node) != tail) && get_confirm_delete(get_node_address(right_node)->next)) {
                     goto SEARCH_AGAIN;
                 } else {
                     return right_node;
                 }
             }
             if (__sync_bool_compare_and_swap(&((left_node)->next), left_node_next, right_node)) { // RIGHT HERE
-                if ((right_node != tail) && get_is_delete(right_node->next)) {
+                if ((get_node_address(right_node) != tail) && get_confirm_delete(get_node_address(right_node)->next)) {
                     goto SEARCH_AGAIN;
                 } else {
                     return right_node;
@@ -124,11 +130,11 @@ public:
         } while (true);
     }
 
-    void remove(int value) {
+    void remove(int key) {
         Node *right_node = NULL, *right_node_next = NULL, *left_node = NULL;
         while (true) {
-            right_node = search_after(head, value, left_node);
-            if ((right_node == tail) || (right_node->data != value)) {
+            right_node = search_after(head, key, left_node);
+            if ((right_node == tail) || (right_node->key != key)) {
                 return;
             }// false;
             right_node_next = right_node->next;
@@ -140,15 +146,15 @@ public:
         }
         // try to physically delete the node
 //        if (!__sync_bool_compare_and_swap(&(left_node->next), right_node, right_node_next)) {
-//            right_node = search_after(head, right_node->data, left_node);
+//            right_node = search_after(head, right_node->key, left_node);
 //        }
         return;// true;
     }
 
-    bool find(int value) {
+    bool find(int key) {
         Node *right_node, *left_node;
-        right_node = search_after(head, value, left_node);
-        if ((right_node == tail) || (right_node->data != value)) return false;
+        right_node = search_after(head, key, left_node);
+        if ((right_node == tail) || (right_node->key != key)) return false;
         else return true;
     }
     //string printlist();

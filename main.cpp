@@ -57,9 +57,9 @@ public:
 
 void *insert_task_List(void *ptr) {
     PTR *p = (PTR *) ptr;
-    for (int i = 1; i < 150; i += 1) {
-        Node *n = new Node(i);
-        p->list->insert(i);
+    for (int i = 1; i < 100; i += 1) {
+        Node *n = new Node(i, 0);
+        p->list->insert(i, 0);
 //        printf("insert randomly %d\n", i);
     }
 }
@@ -103,7 +103,7 @@ void testTestList() {
     p->thread_num = 32;
 
     func_t funcs[] = {insert_task_List, delete_task};
-    int thread_nums[] = {1, 3};
+    int thread_nums[] = {10, 10};
     PTR *ptrs[] = {p, p};
 
     BenchMark benchMark;
@@ -119,10 +119,12 @@ void testTestList() {
 //    list->remove(996);
 //    list->remove(5);
 //    list->remove(8);
-    list->insert(50);
-//    list->remove(0);
+    list->insert(50, 0);
+    list->insert(49, 0);
+//    list->remove(1);
     list->remove(50);
-//    list->insert(48);
+//    list->remove(8);
+    list->insert(51, 0);
 
 //    assert(list->find(50));
 //    list->remove(3);
@@ -132,8 +134,8 @@ void testTestList() {
 
 
 //    Node *left = new Node(-1);
-//    int rst = list->search_after(list->head, 2, left)->data;
-//    printf("rst = %d, left = %d", rst, left->data);
+//    int rst = list->search_after(list->head, 2, left)->key;
+//    printf("rst = %d, left = %d", rst, left->key);
 
 //    assert(list->find(6));
 
