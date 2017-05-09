@@ -6,13 +6,24 @@
 #include <atomic>
 #include <mutex>
 
+/**
+ * is_delete flag utilize the last digit of node address,
+ * it will be set through set_is_delete,
+ * if it is set to 1, means this node is marked to be logically deleted
+ * All logic operations should skip such a logically deleted node
+ * Later GC will deal with those logically deleted node.
+ * Once a node is marked as logically deleted, it will never be back
+ */
 
+/**
+ * confirm delete flag is used in index_layer rebuild
+ * TODO: more details need to be added
+ */
 #define set_is_delete(address) ((Node *)((uintptr_t)address | 1))
 #define set_confirm_delete(address) ((Node *)((uintptr_t)address | 2))
 #define get_is_delete(address) ((int)((uintptr_t)address & 0x00000001))
 #define get_confirm_delete(address) ((int)((uintptr_t)address & 0x00000002) == 2 ?1:0)
 #define get_node_address(address) ((Node *)((uintptr_t)address & -4))
-
 
 
 class Node {
@@ -56,9 +67,9 @@ public:
         Node *right_node, *left_node;
 
         while (true) {
-            right_node = search_from(head, value, left_node);
-//            if ((right_node != tail) && (right_node->data == value))
-//                return; //false;
+            right_node = search_after(head, value, left_node);
+            if ((right_node != tail) && (right_node->data == value))
+                return; //false;
             new_node->next = right_node;
             if (__sync_bool_compare_and_swap(&left_node->next, right_node, new_node))
                 return;// true;
@@ -67,12 +78,13 @@ public:
 
     /**
      * Search value in the list from start_node (exclusive).
-     * return the right node value and put left node point in parameter left_node
+     * Find right and left node such that value is in (left_node.data, right_node.data]
+     * return the right node and put left node point in parameter left_node
      * @param value
      * @param left_node
      * @return
      */
-    Node *search_from(Node *start_node, int value, Node *&left_node) {
+    Node *search_after(Node *start_node, int value, Node *&left_node) {
         Node *left_node_next, *right_node;
 
         SEARCH_AGAIN:
@@ -115,7 +127,7 @@ public:
     void remove(int value) {
         Node *right_node = NULL, *right_node_next = NULL, *left_node = NULL;
         while (true) {
-            right_node = search_from(head, value, left_node);
+            right_node = search_after(head, value, left_node);
             if ((right_node == tail) || (right_node->data != value)) {
                 return;
             }// false;
@@ -126,15 +138,16 @@ public:
                     break;
             }
         }
-        if (!__sync_bool_compare_and_swap(&(left_node->next), right_node, right_node_next)) {
-            right_node = search_from(head, right_node->data, left_node);
-        }
+        // try to physically delete the node
+//        if (!__sync_bool_compare_and_swap(&(left_node->next), right_node, right_node_next)) {
+//            right_node = search_after(head, right_node->data, left_node);
+//        }
         return;// true;
     }
 
     bool find(int value) {
         Node *right_node, *left_node;
-        right_node = search_from(head, value, left_node);
+        right_node = search_after(head, value, left_node);
         if ((right_node == tail) || (right_node->data != value)) return false;
         else return true;
     }
@@ -144,13 +157,17 @@ public:
      * Non-thread-safe
      */
     int to_string() {
-        Node *cur = head;
+        Node *cur = head->next;
         int count = 0;
-        while (cur->next != tail) {
-            cur->next->to_string();
+        while (get_node_address(cur) != tail) {
+            if (!get_is_delete(cur->next)) {
+                count++;
+            } else {
+                printf("D:");
+            }
+            cur->to_string();
             printf("\n");
-            cur = cur->next;
-            count++;
+            cur = get_node_address(cur->next);
         }
         return count;
     }

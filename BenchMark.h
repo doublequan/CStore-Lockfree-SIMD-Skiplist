@@ -66,6 +66,41 @@ public:
     }
 
 
+    double single_mix_run(pthread_t *threads, int *thread_nums, func_t *f, void **ptrs, int num) {
+        double startTime = CycleTimer::currentSeconds();
+
+        int thread_count = 0;
+        for (int n = 0; n < num; n++) {
+            for (; thread_count < thread_nums[n]; thread_count++) {
+                pthread_create(&threads[thread_count], NULL, f[n], ptrs[n]);
+            }
+        }
+
+        thread_count = 0;
+        for (int n = 0; n < num; n++) {
+            for (; thread_count < thread_nums[n]; thread_count++) {
+                pthread_join(threads[thread_count], NULL);
+            }
+        }
+
+        double endTime = CycleTimer::currentSeconds();
+
+        return endTime - startTime;
+    }
+
+    void mix_run(int *thread_nums, func_t *f, void **ptrs, int num, int run_times = 1) {
+        int thread_num = 0;
+        for (int i = 0; i < num; i++) thread_num += thread_nums[i];
+
+        pthread_t threads[thread_num];
+
+        double time_sum = 0.0;
+        for (int tmp = 0; tmp < run_times; tmp++) {
+            time_sum += single_mix_run(threads, thread_nums, f, ptrs, num);
+        }
+        printf("This run cost : %.3fs\n", time_sum / run_times);
+    }
+
 
 };
 
