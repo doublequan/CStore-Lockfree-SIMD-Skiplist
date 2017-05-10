@@ -16,6 +16,8 @@
 #include "ConcurrentList.h"
 #include "constants.h"
 
+//#define DEBUG
+
 class IndexNode{
 public:
     int indexes[VECTOR_SIZE];
@@ -31,26 +33,33 @@ public:
     // give an int(representing the compare result), return the pointer to
     // next node to find(could be index node or storage node)
     void* routeToNextNode(int key){
+#ifdef DEBUG
         printf("begin routing for key %d. current indexes:\n", key);
         print_indexes();
         printf("\n");
+#endif
 //        std::string result = std::string(VECTOR_SIZE, '1');
+//        int8_t result_char[VECTOR_SIZE];
 //        index_compare_ispc( indexes, key, index_size, result);
         std::string result = compare(key);
+#ifdef DEBUG
         printf("compare result %s, going to node %p\n", result.c_str(), routing_table[result]);
+#endif
         return routing_table[result];
     }
 
     std::string compare(int key){
-        std::string result = std::string(VECTOR_SIZE, '1');
-        for(int i = 0; i < index_size; i++){
-            if(key >= indexes[i]){
+        char result[VECTOR_SIZE+1];
+        for(int i = 0; i < VECTOR_SIZE; i++){
+            if(i < index_size && key >= indexes[i]){
                 result[i] = '0';
             }else{
-                break;
+                result[i] = '1';
             }
         }
-        return result;
+        result[VECTOR_SIZE] = 0;
+        std::string str_result = std::string(result);
+        return str_result;
     }
 
     void print_indexes(){
@@ -88,18 +97,23 @@ public:
 
         int current_level = MAX_HEIGHT -1;
 
+#ifdef DEBUG
         printf("find key %d starts, current level: %d\n", key, current_level);
-
+#endif
         IndexNode* next_node , *last_node;
 //        IndexNode* last_node = &starts[MAX_HEIGHT-1];
         for( ; current_level >= 0; current_level--){
             if(starts[current_level].next != &ends[current_level]){
                 last_node = &starts[current_level];
                 next_node = last_node->next;
+#ifdef DEBUG
                 printf("level %d has index node, go to the first node on this level\n", current_level);
+#endif
                 break;
             }
+#ifdef DEBUG
             printf("level %d has no index node, go down one level\n", current_level);
+#endif
         }
         // if no index layer is found, return null
         if(current_level < 0){
@@ -109,10 +123,14 @@ public:
             last_node = next_node;
             next_node = (IndexNode*)(next_node->routeToNextNode(key));
             if(next_node == NULL){
+#ifdef DEBUG
                 printf("down route not found, go to the next index node on level %d\n", current_level);
+#endif
                 next_node = last_node->next;
                 if(next_node == &ends[current_level]){
+#ifdef DEBUG
                     printf("reach end of index layer\n");
+#endif
                     int tmp_index = last_node->indexes[last_node->index_size-1];
                     next_node = (IndexNode*)(last_node->routeToNextNode(tmp_index));
                     current_level--;
@@ -142,7 +160,9 @@ public:
         }
         Node* cur = head;
         while (get_node_address((cur=cur->next)) != tail){
+#ifdef DEBUG
             printf("current node key %d index height %d\n", cur->key, cur->height);
+#endif
             if(get_is_delete(cur->next)){
                 cur->next = set_confirm_delete(cur->next);
             }
@@ -153,18 +173,26 @@ public:
                 for(int i = 0; i < cur->height; i++){
                     IndexNode* node = leveled_nodes[i];
                     node->indexes[level_index_count[i]] = cur->key;
+#ifdef DEBUG
                     printf("push key %d into index node %p on level %d, current node index size %d\n", cur->key, node,
                            i, level_index_count[i]+1);
+#endif
                     routing_keys[i][level_index_count[i]] = '0';
                     if(i != 0){
                         node->routing_table[routing_keys[i]] = leveled_nodes[i-1];
+#ifdef DEBUG
                         printf("node %p route to index node %p on compare result %s\n", node, leveled_nodes[i-1], routing_keys[i].c_str());
+#endif
                     }else{
                         leveled_nodes[0]->routing_table[routing_keys[0]] = cur;
+#ifdef DEBUG
                         printf("node %p route to storage node %p on compare result %s\n", node, cur, routing_keys[0].c_str());
+#endif
                     }
                     if(++level_index_count[i] == VECTOR_SIZE){
+#ifdef DEBUG
                         printf("node %p index vector full\n", node);
+#endif
                         IndexNode* new_node = new IndexNode();
                         new_node->indexes[0] = cur->key;
                         leveled_nodes[i] = new_node;
