@@ -61,19 +61,20 @@ public:
         srand (time(NULL));
     }
 
-    inline unsigned intRand(const unsigned & min, const unsigned & max) {
+    inline int intRand(const int & min, const int & max) {
         static thread_local std::mt19937 generator(time(0));
-        std::uniform_int_distribution<unsigned> distribution(min,max);
+        std::uniform_int_distribution<int> distribution(min,max);
         return distribution(generator);
     }
 
     int randomLevel () {
-        int level = 0;
-        for (unsigned number = intRand(0, UINT32_MAX); (number & 1) == 1 && level < MAX_HEIGHT; number >>= 1)
-        {
-            level++;
+        int v = 0;
+
+        while ((((double)intRand(0, 100) / 100)) < 0.5 &&
+               v < MAX_HEIGHT) {
+            v += 1;
         }
-        return level;
+        return v;
     }
 
     ~lockfreeList() {
@@ -202,4 +203,3 @@ public:
 
 
 #endif //CLION_LOCKFREE_LIST_H
-

@@ -11,12 +11,13 @@
 #include <xmmintrin.h>
 #include <unordered_map>
 #include <iostream>
-#include "compare_ispc.h"
+//#include "compare_ispc.h"
 //#include "build_index_node_ispc.h"
 #include "ConcurrentList.h"
 #include "constants.h"
 
-// #define DEBUG
+//#define DEBUG
+
 class IndexNode{
 public:
     int indexes[VECTOR_SIZE];
@@ -41,9 +42,7 @@ public:
 //        std::string result = std::string(VECTOR_SIZE, '1');
 //        int8_t result_char[VECTOR_SIZE];
 //        index_compare_ispc( indexes, key, index_size, result);
-        // std::string result = compare(key);
-        int8_t result[VECTOR_SIZE+1];
-       ispc::index_compare_ispc( indexes, key, VECTOR_SIZE, index_size, result);
+        std::string result = compare(key);
 #ifdef DEBUG
         printf("compare result %s, going to node %p\n", result.c_str(), routing_table[result]);
 #endif
@@ -255,4 +254,3 @@ public:
     }
 };
 #endif //CSTORE_SKIPLIST_H
-
