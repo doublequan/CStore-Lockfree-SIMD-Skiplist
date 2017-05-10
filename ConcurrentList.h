@@ -7,6 +7,7 @@
 #include <mutex>
 #include <stdlib.h>
 #include <time.h>
+#include <random>
 #include "constants.h"
 
 /**
@@ -54,10 +55,26 @@ public:
     Node *tail;
 
     lockfreeList() {
-        head = new Node(NULL, NULL, rand() % (MAX_HEIGHT+1) );
-        tail = new Node(NULL, NULL, rand() % (MAX_HEIGHT+1));
+        head = new Node(NULL, NULL, randomLevel() );
+        tail = new Node(NULL, NULL, randomLevel() );
         head->next = tail;
         srand (time(NULL));
+    }
+
+    inline int intRand(const int & min, const int & max) {
+        static thread_local std::mt19937 generator(time(0));
+        std::uniform_int_distribution<int> distribution(min,max);
+        return distribution(generator);
+    }
+
+    int randomLevel () {
+        int v = 0;
+
+        while ((((double)intRand(0, 100) / 100)) < 0.5 &&
+               v < MAX_HEIGHT) {
+            v += 1;
+        }
+        return v;
     }
 
     ~lockfreeList() {
@@ -65,7 +82,7 @@ public:
     }
 
     void insert(int key, int value) {
-        Node *new_node = new Node(key, value, rand() % (MAX_HEIGHT+1));
+        Node *new_node = new Node(key, value, randomLevel());
         Node *right_node, *left_node;
 
         while (true) {
