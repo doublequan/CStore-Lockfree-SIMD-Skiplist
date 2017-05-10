@@ -23,7 +23,8 @@ public:
     int indexes[VECTOR_SIZE];
     IndexNode* next;
     IndexNode* prev;
-    std::unordered_map<std::string, void*> routing_table;
+//    std::unordered_map<std::string, void*> routing_table;
+    void* routing_array[VECTOR_SIZE];
     int index_size = VECTOR_SIZE;
     IndexNode(){
         next = NULL;
@@ -45,7 +46,18 @@ public:
 #ifdef DEBUG
         printf("compare result %s, going to node %p\n", result.c_str(), routing_table[result]);
 #endif
-        return routing_table[result];
+        if(result[index_size-1] == '1') {
+            for (int i = index_size - 2; i >= 0; i--) {
+                if (result[i] == '0') {
+                    return routing_array[i+1];
+                }
+            }
+            return routing_array[0];
+        }
+        if(index_size < VECTOR_SIZE){
+            return routing_array[index_size];
+        }
+        return NULL;
     }
 
     std::string compare(int key){
@@ -87,6 +99,17 @@ public:
             while((cur=cur->next) != &ends[i]){
                 cur->print_indexes();
                 printf("\t");
+            }
+            printf("end\n");
+        }
+    }
+
+    void print_layer_pointers(){
+        for(int i = MAX_HEIGHT-1; i >= 0; i--){
+            IndexNode* cur = &starts[i];
+            printf("%p\t", cur);
+            while((cur=cur->next) != &ends[i]){
+                printf("%p\t", cur);
             }
             printf("end\n");
         }
@@ -150,13 +173,13 @@ public:
         // store the number of indexes exists in each index node
         int level_index_count[MAX_HEIGHT];
         // routing key is in the format of "0000...1111", each time insert an index, replace the corresponding char to 0
-        std::string routing_keys[MAX_HEIGHT];
-        std::string initial_key = std::string(VECTOR_SIZE, '1');
-        std::string end_key = std::string(VECTOR_SIZE, '0');
+//        std::string routing_keys[MAX_HEIGHT];
+//        std::string initial_key = std::string(VECTOR_SIZE, '1');
+//        std::string end_key = std::string(VECTOR_SIZE, '0');
         for(int i = 0; i < MAX_HEIGHT; i++){
             leveled_nodes[i] = &starts[i];
             level_index_count[i] = VECTOR_SIZE-1;
-            routing_keys[i] = initial_key;
+//            routing_keys[i] = initial_key;
         }
         Node* cur = head;
         while (get_node_address((cur=cur->next)) != tail){
@@ -172,24 +195,28 @@ public:
 //                set_node_pointer(leveled_nodes, routing_keys, level_index_count, MAX_HEIGHT, cur->height);
                 for(int i = 0; i < cur->height; i++){
                     IndexNode* node = leveled_nodes[i];
-                    node->indexes[level_index_count[i]] = cur->key;
+                    node->indexes[level_index_count[i]++] = cur->key;
 #ifdef DEBUG
                     printf("push key %d into index node %p on level %d, current node index size %d\n", cur->key, node,
                            i, level_index_count[i]+1);
 #endif
-                    routing_keys[i][level_index_count[i]] = '0';
-                    if(i != 0){
-                        node->routing_table[routing_keys[i]] = leveled_nodes[i-1];
+//                    routing_keys[i][level_index_count[i]] = '0';
+                    if(level_index_count[i] != VECTOR_SIZE) {
+                        if (i != 0) {
+//                        node->routing_table[routing_keys[i]] = leveled_nodes[i-1];
+                            node->routing_array[level_index_count[i]] = leveled_nodes[i - 1];
 #ifdef DEBUG
-                        printf("node %p route to index node %p on compare result %s\n", node, leveled_nodes[i-1], routing_keys[i].c_str());
+                            printf("node %p route to index node %p on compare result %s\n", node, leveled_nodes[i-1], routing_keys[i].c_str());
 #endif
-                    }else{
-                        leveled_nodes[0]->routing_table[routing_keys[0]] = cur;
+                        } else {
+//                        leveled_nodes[0]->routing_table[routing_keys[0]] = cur;
+                            node->routing_array[level_index_count[i]] = cur;
 #ifdef DEBUG
-                        printf("node %p route to storage node %p on compare result %s\n", node, cur, routing_keys[0].c_str());
+                            printf("node %p route to storage node %p on compare result %s\n", node, cur, routing_keys[0].c_str());
 #endif
+                        }
                     }
-                    if(++level_index_count[i] == VECTOR_SIZE){
+                    if(level_index_count[i] == VECTOR_SIZE){
 #ifdef DEBUG
                         printf("node %p index vector full\n", node);
 #endif
@@ -197,14 +224,16 @@ public:
                         new_node->indexes[0] = cur->key;
                         leveled_nodes[i] = new_node;
                         level_index_count[i] = 1;
-                        routing_keys[i] = initial_key;
-                        node->routing_table[end_key] = NULL;
+//                        routing_keys[i] = initial_key;
+//                        node->routing_table[end_key] = NULL;
                         node->next = new_node;
-                        routing_keys[i][0] = '0';
+//                        routing_keys[i][0] = '0';
                         if(i != 0) {
-                            new_node->routing_table[routing_keys[i]] = leveled_nodes[i-1];
+//                            new_node->routing_table[routing_keys[i]] = leveled_nodes[i-1];
+                            new_node->routing_array[1] = leveled_nodes[i-1];
                         }else{
-                            new_node->routing_table[routing_keys[i]] = cur;
+//                            new_node->routing_table[routing_keys[i]] = cur;
+                            new_node->routing_array[1] = cur;
                         }
                     }
                 }
@@ -213,11 +242,13 @@ public:
         for(int i = 0; i < MAX_HEIGHT; i++){
             leveled_nodes[i]->index_size = level_index_count[i];
             leveled_nodes[i]->next = &ends[i];
-            leveled_nodes[i]->routing_table[end_key] = NULL;
+//            leveled_nodes[i]->routing_table[end_key] = NULL;
             if( i == 0 ){
-                starts[i].next->routing_table[initial_key] = head->next;
+//                starts[i].next->routing_table[initial_key] = head->next;
+                starts[i].next->routing_array[0] = head->next;
             }else{
-                starts[i].next->routing_table[initial_key] = starts[i-1].next;
+//                starts[i].next->routing_table[initial_key] = starts[i-1].next;
+                starts[i].next->routing_array[0] = starts[i-1].next;
             }
         }
     }

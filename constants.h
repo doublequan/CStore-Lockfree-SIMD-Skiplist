@@ -5,7 +5,7 @@
 #ifndef CSTORE_CONSTANTS_H
 #define CSTORE_CONSTANTS_H
 
-#define MAX_HEIGHT 30
-#define VECTOR_SIZE 64
+#define MAX_HEIGHT 20
+#define VECTOR_SIZE 8
 
 #endif //CSTORE_CONSTANTS_H
