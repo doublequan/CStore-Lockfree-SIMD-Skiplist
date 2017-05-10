@@ -8,4 +8,6 @@
 #define MAX_HEIGHT 20
 #define VECTOR_SIZE 8
 
+#define REBUILD_THRESHOLD 50
+
 #endif //CSTORE_CONSTANTS_H

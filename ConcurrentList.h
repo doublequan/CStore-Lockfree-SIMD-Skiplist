@@ -32,10 +32,8 @@
  */
 
 
-void *background_job(void *ptr) {
 
-
-}
+void *background_job(void *ptr);
 
 
 class LockfreeList {
@@ -49,10 +47,7 @@ public:
 
 #ifdef INDEX_DEBUG
 
-    IndexLayer *cur_index_layer;
-    std::atomic<unsigned int> cur_index_layer_counter;
-    IndexLayer *new_index_layer;
-    std::atomic<unsigned int> new_index_layer_counter;
+    IndexLayer *index_layer;
 #endif
 
     std::atomic<unsigned int> modification_counter;
@@ -72,12 +67,9 @@ public:
         load_data();
 
 #ifdef INDEX_DEBUG
-        cur_index_layer = new IndexLayer();
-        cur_index_layer->build(head, tail);
-        cur_index_layer->print_index_layers();
-        printf("test find %d\n", cur_index_layer->find(50)->key);
+        index_layer = new IndexLayer();
+        index_layer->build(head, tail);
         index_ready = true;
-        new_index_layer = NULL;
 #endif
         pthread_create(&background_thread, NULL, background_job, (void *) this);
     }
@@ -106,25 +98,16 @@ public:
         }
 
 #ifdef INDEX_DEBUG
-        IndexLayer *indexLayer;
+        IndexLayer *indexLayer = index_layer;
+
         global_counter++;
-        if (new_index_layer != NULL) {
-            new_index_layer_counter++;
-            indexLayer = new_index_layer;
-        } else {
-            cur_index_layer_counter++;
-            indexLayer = cur_index_layer;
-        }
+
+        indexLayer->ongoing_query_counter++;
 
         Node *n = indexLayer->find(key - 1);
 
-        printf("key: %d, return index key: %d \n", key -1, n->key);
+        indexLayer->ongoing_query_counter--;
 
-        if (new_index_layer != NULL) {
-            new_index_layer_counter--;
-        } else {
-            cur_index_layer_counter--;
-        }
         global_counter--;
 
         return search_after(n, key, left_node);
@@ -277,9 +260,53 @@ public:
         for (int i = 100; i >= 0; i--) {
             insert(i, 1);
         }
+        modification_counter = 0;
     }
 };
 
+
+void *background_job(void *ptr) {
+
+    LockfreeList *lockfreeList = (LockfreeList *) ptr;
+
+    while (true) {
+        unsigned counter = lockfreeList->modification_counter;
+        printf("[Background] : %u\n", counter);
+
+        if (counter >= REBUILD_THRESHOLD) {
+            IndexLayer *old_index_layer = lockfreeList->index_layer;
+
+            printf("got old index layer\n");
+
+            IndexLayer *new_index_layer = new IndexLayer();
+            new_index_layer->build(lockfreeList->head, lockfreeList->tail);
+
+            printf("created and built new index layer\n");
+
+            lockfreeList->index_layer = new_index_layer;
+
+            while (lockfreeList->global_counter
+                   != old_index_layer->ongoing_query_counter
+                      + new_index_layer->ongoing_query_counter) {
+                printf("waiting");
+                usleep(1000);
+            }
+
+            while (old_index_layer->ongoing_query_counter != 0) {
+                printf("waiting...");
+                usleep(1000);
+            }
+
+            printf("Going to free old index layer\n");
+            free(old_index_layer);
+
+            lockfreeList->modification_counter = 0;
+
+        }
+
+        usleep(10000);
+    }
+}
 
 #endif //CLION_LOCKFREE_LIST_H
 

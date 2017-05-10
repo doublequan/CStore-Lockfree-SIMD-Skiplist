@@ -129,6 +129,9 @@ void testTestList() {
     list->insert(50, 0);
     list->remove(50);
     list->insert(50, 0);
+    for (int i = 10000; i < 10100; i++) {
+        list->insert(i, 1);
+    }
     list->insert(50, 0);
 
 //    assert(list->find(50));
@@ -143,6 +146,8 @@ void testTestList() {
 //    printf("rst = %d, left = %d", rst, left->key);
 
 //    assert(list->find(6));
+
+    sleep(1);
 
 }
 
