@@ -5,11 +5,18 @@
 #include <unistd.h>
 #include <atomic>
 #include <mutex>
-#include <stdlib.h>
 #include <time.h>
 #include <random>
 #include "constants.h"
+#include "Node.h"
 
+#define INDEX_DEBUG
+
+#ifdef INDEX_DEBUG
+
+#include "Skiplist.h"
+
+#endif
 /**
  * is_delete flag utilize the last digit of node address,
  * it will be set through set_is_delete,
@@ -23,69 +30,118 @@
  * confirm delete flag is used in index_layer rebuild
  * TODO: more details need to be added
  */
-#define set_is_delete(address) ((Node *)((uintptr_t)address | 1))
-#define set_confirm_delete(address) ((Node *)((uintptr_t)address | 2))
-#define get_is_delete(address) ((int)((uintptr_t)address & 0x00000001))
-#define get_confirm_delete(address) ((int)((uintptr_t)address & 0x00000002) == 2 ?1:0)
-#define get_node_address(address) ((Node *)((uintptr_t)address & -4))
-#define get_node_address_ignore_last_digit(address) ((Node *)((uintptr_t)address & -2))
 
 
-class Node {
-public:
-    int key;
-    int value;
-    Node *next;
-
-    Node(int k, int v, int h) : key(k), value(v), next(NULL), height(h) {}
-
-    void to_string() {
-        printf("%d", key);
-    }
-
-    // height of index for this node. 0 for no index.
-    int height;
-};
+void *background_job(void *ptr) {
 
 
-class lockfreeList {
+}
+
+
+class LockfreeList {
 public:
 
     Node *head;
     Node *tail;
 
-    lockfreeList() {
-        head = new Node(NULL, NULL, randomLevel() );
-        tail = new Node(NULL, NULL, randomLevel() );
+    bool index_ready;
+
+
+#ifdef INDEX_DEBUG
+
+    IndexLayer *cur_index_layer;
+    std::atomic<unsigned int> cur_index_layer_counter;
+    IndexLayer *new_index_layer;
+    std::atomic<unsigned int> new_index_layer_counter;
+#endif
+
+    std::atomic<unsigned int> modification_counter;
+    std::atomic<unsigned int> global_counter;
+
+    pthread_t background_thread;
+
+
+    LockfreeList() {
+        head = new Node(NULL, NULL, randomLevel());
+        tail = new Node(NULL, NULL, randomLevel());
         head->next = tail;
-        srand (time(NULL));
+        srand(time(NULL));
+
+        index_ready = false;
+
+        load_data();
+
+#ifdef INDEX_DEBUG
+        cur_index_layer = new IndexLayer();
+        cur_index_layer->build(head, tail);
+        cur_index_layer->print_index_layers();
+        printf("test find %d\n", cur_index_layer->find(50)->key);
+        index_ready = true;
+        new_index_layer = NULL;
+#endif
+        pthread_create(&background_thread, NULL, background_job, (void *) this);
     }
 
-    inline unsigned intRand(const unsigned & min, const unsigned & max) {
+    inline unsigned intRand(const unsigned &min, const unsigned &max) {
         static thread_local std::mt19937 generator(time(0));
-        std::uniform_int_distribution<unsigned> distribution(min,max);
+        std::uniform_int_distribution<unsigned> distribution(min, max);
         return distribution(generator);
     }
 
-    int randomLevel () {
+    int randomLevel() {
         int level = 0;
-        for (unsigned number = intRand(0, UINT32_MAX); (number & 1) == 1 && level < MAX_HEIGHT; number >>= 1)
-        {
+        for (unsigned number = intRand(0, UINT32_MAX); (number & 1) == 1 && level < MAX_HEIGHT; number >>= 1) {
             level++;
         }
         return level;
     }
 
-    ~lockfreeList() {
-
+    ~LockfreeList() {
     }
+
+
+    Node *search_by_index(int key, Node *&left_node) {
+        if (!index_ready) {
+            return search_after(head, key, left_node);
+        }
+
+#ifdef INDEX_DEBUG
+        IndexLayer *indexLayer;
+        global_counter++;
+        if (new_index_layer != NULL) {
+            new_index_layer_counter++;
+            indexLayer = new_index_layer;
+        } else {
+            cur_index_layer_counter++;
+            indexLayer = cur_index_layer;
+        }
+
+        Node *n = indexLayer->find(key - 1);
+
+        printf("key: %d, return index key: %d \n", key -1, n->key);
+
+        if (new_index_layer != NULL) {
+            new_index_layer_counter--;
+        } else {
+            cur_index_layer_counter--;
+        }
+        global_counter--;
+
+        return search_after(n, key, left_node);
+
+#else
+        return search_after(head, key, left_node);
+#endif
+    }
+
 
     void insert(int key, int value) {
         Node *new_node = new Node(key, value, randomLevel());
         Node *right_node, *left_node;
 
         while (true) {
-            right_node = search_after(head, key, left_node);
+//            right_node = search_after(head, key, left_node);
+            right_node = search_by_index(key, left_node);
             if ((get_node_address(right_node) != tail) && !get_is_delete(get_node_address(right_node)->next)
                 && (get_node_address(right_node)->key == key))
                 return; //false;
@@ -95,8 +151,12 @@ public:
             } else {
                 new_node = get_node_address(new_node);
             }
-            if (__sync_bool_compare_and_swap(&get_node_address(left_node)->next, right_node, new_node))
+            if (__sync_bool_compare_and_swap(&get_node_address(left_node)->next, right_node, new_node)) {
+
+                modification_counter++;
+
                 return;// true;
+            }
         }
     }
 
@@ -153,15 +213,20 @@ public:
     void remove(int key) {
         Node *right_node = NULL, *right_node_next = NULL, *left_node = NULL;
         while (true) {
-            right_node = search_after(head, key, left_node);
+//            right_node = search_after(index_layer->find(key), key, left_node);
+            right_node = search_by_index(key, left_node);
             if ((right_node == tail) || (right_node->key != key)) {
                 return;
             }// false;
             right_node_next = right_node->next;
             if (!get_is_delete(right_node_next)) {
                 if (__sync_bool_compare_and_swap(&(right_node->next), right_node_next,
-                                                 set_is_delete(right_node_next)))
+                                                 set_is_delete(right_node_next))) {
+
+                    modification_counter++;
+
                     break;
+                }
             }
         }
         // try to physically delete the node
@@ -171,11 +236,18 @@ public:
         return;// true;
     }
 
-    bool find(int key) {
+    int find(int key) {
         Node *right_node, *left_node;
-        right_node = search_after(head, key, left_node);
-        if ((right_node == tail) || (right_node->key != key)) return false;
-        else return true;
+//        right_node = search_after(index_layer->find(key), key, left_node);
+        right_node = search_by_index(key, left_node);
+        if ((right_node == tail) || (right_node->key != key)) {
+
+            printf("find error");
+
+            return NULL;
+        } else {
+            return right_node->value;
+        }
     }
     //string printlist();
 
@@ -198,6 +270,14 @@ public:
         return count;
     }
 
+    /**
+     * Non-thread-safe
+     */
+    void load_data() {
+        for (int i = 100; i >= 0; i--) {
+            insert(i, 1);
+        }
+    }
 };
 
 

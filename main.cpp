@@ -3,6 +3,7 @@
 #include "BenchMark.h"
 //#include "ConcurrentLinkedList.h"
 #include "ConcurrentList.h"
+#include "Skiplist.h"
 
 /*
 void *insert_task(void *ptr) {
@@ -50,7 +51,7 @@ void testConcurrentSortedLinkedList() {
 
 class PTR {
 public:
-    lockfreeList *list;
+    LockfreeList *list;
     int thread_id;
     int thread_num;
 };
@@ -58,7 +59,7 @@ public:
 void *insert_task_List(void *ptr) {
     PTR *p = (PTR *) ptr;
     for (int i = 1; i < 100; i += 1) {
-        Node *n = new Node(i, 0);
+        Node *n = new Node(i, 0, 20);
         p->list->insert(i, 0);
 //        printf("insert randomly %d\n", i);
     }
@@ -92,7 +93,7 @@ void *test(void *p) {
 }
 
 void testTestList() {
-    lockfreeList *list = new lockfreeList();
+    LockfreeList *list = new LockfreeList();
 
     int len;
     len = list->to_string();
@@ -125,6 +126,10 @@ void testTestList() {
     list->remove(50);
 //    list->remove(8);
     list->insert(51, 0);
+    list->insert(50, 0);
+    list->remove(50);
+    list->insert(50, 0);
+    list->insert(50, 0);
 
 //    assert(list->find(50));
 //    list->remove(3);

@@ -13,7 +13,8 @@
 #include <iostream>
 #include "compare_ispc.h"
 //#include "build_index_node_ispc.h"
-#include "ConcurrentList.h"
+//#include "ConcurrentList.h"
+#include "Node.h"
 #include "constants.h"
 
 // #define DEBUG
