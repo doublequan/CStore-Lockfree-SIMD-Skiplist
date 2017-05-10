@@ -61,19 +61,31 @@ public:
         return NULL;
     }
 
-    std::string compare(int key){
-        char result[VECTOR_SIZE+1];
+    uint64_t compare(int key){
+        uint8_t result[VECTOR_SIZE+1];
         for(int i = 0; i < VECTOR_SIZE; i++){
             if(i < index_size && key >= indexes[i]){
-                result[i] = '0';
+                result[i] = 0;
             }else{
-                result[i] = '1';
+                result[i] = 1;
             }
         }
-        result[VECTOR_SIZE] = 0;
-        std::string str_result = std::string(result);
-        return str_result;
+        return *((uint64_t*)result);
     }
+
+    // std::string compare(int key){
+    //     char result[VECTOR_SIZE+1];
+    //     for(int i = 0; i < VECTOR_SIZE; i++){
+    //         if(i < index_size && key >= indexes[i]){
+    //             result[i] = '0';
+    //         }else{
+    //             result[i] = '1';
+    //         }
+    //     }
+    //     result[VECTOR_SIZE] = 0;
+    //     std::string str_result = std::string(result);
+    //     return str_result;
+    // }
 
     void print_indexes(){
         for(int i = 0; i < index_size; i++){
