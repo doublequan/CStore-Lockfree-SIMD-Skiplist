@@ -10,62 +10,96 @@
 #include <stdint.h>
 #include <xmmintrin.h>
 #include <unordered_map>
-#include "compare_ispc.h"
-#include "build_index_node_ispc.h"
-#include "concurrentLinkedList.h"
-
-#define MAX_HEIGHT 20
-#define VECTOR_SIZE 32
-
+#include <iostream>
+//#include "compare_ispc.h"
+//#include "build_index_node_ispc.h"
+#include "ConcurrentList.h"
+#include "constants.h"
 
 class IndexNode{
-private:
-    std::string indexes[];
 public:
+    int indexes[VECTOR_SIZE];
     IndexNode* next;
     IndexNode* prev;
     std::unordered_map<std::string, void*> routing_table;
+    int index_size = VECTOR_SIZE;
     IndexNode(){
-        indexes = new std::string[VECTOR_SIZE];
         next = NULL;
         prev = NULL;
-        routing_table = std::unordered_map<std::string, void*>();
     }
 
     // give an int(representing the compare result), return the pointer to
     // next node to find(could be index node or storage node)
-    void* routeToNextNode(std::string key){
-        std::string result = std::string(VECTOR_SIZE, '0');
-        index_compare_ispc( indexes, key, VECTOR_SIZE, result);
+    void* routeToNextNode(int key){
+        printf("begin routing for key %d. current indexes:\n", key);
+        print_indexes();
+        printf("\n");
+//        std::string result = std::string(VECTOR_SIZE, '1');
+//        index_compare_ispc( indexes, key, index_size, result);
+        std::string result = compare(key);
+        printf("compare result %s, going to node %p\n", result.c_str(), routing_table[result]);
         return routing_table[result];
+    }
+
+    std::string compare(int key){
+        std::string result = std::string(VECTOR_SIZE, '1');
+        for(int i = 0; i < index_size; i++){
+            if(key >= indexes[i]){
+                result[i] = '0';
+            }else{
+                break;
+            }
+        }
+        return result;
+    }
+
+    void print_indexes(){
+        for(int i = 0; i < index_size; i++){
+            printf("%d ", indexes[i]);
+        }
     }
 
 };
 
 class IndexLayer{
 private:
-    IndexNode starts[];
-    IndexNode ends[];
+    IndexNode starts[MAX_HEIGHT];
+    IndexNode ends[MAX_HEIGHT];
 public:
     IndexLayer(){
-        starts = new IndexNode[MAX_HEIGHT];
-        ends = new IndexNode[MAX_HEIGHT];
         for(int i = 0; i < MAX_HEIGHT; i++){
             starts[i].next = &ends[i];
         }
     }
 
+    void print_index_layers(){
+        for(int i = MAX_HEIGHT-1; i >= 0; i--){
+            IndexNode* cur = &starts[i];
+            while((cur=cur->next) != &ends[i]){
+                cur->print_indexes();
+                printf("\t");
+            }
+            printf("end\n");
+        }
+    }
+
     // give a key, return the starting storage node pointer
-    Node* find(std::string key){
+    Node* find(int key){
+
         int current_level = MAX_HEIGHT -1;
+
+        printf("find key %d starts, current level: %d\n", key, current_level);
+
         IndexNode* next_node , *last_node;
 //        IndexNode* last_node = &starts[MAX_HEIGHT-1];
         for( ; current_level >= 0; current_level--){
             if(starts[current_level].next != &ends[current_level]){
                 last_node = &starts[current_level];
                 next_node = last_node->next;
+                printf("level %d has index node, go to the first node on this level\n", current_level);
                 break;
             }
+            printf("level %d has no index node, go down one level\n", current_level);
         }
         // if no index layer is found, return null
         if(current_level < 0){
@@ -74,50 +108,90 @@ public:
         while(current_level >= 0){
             last_node = next_node;
             next_node = (IndexNode*)(next_node->routeToNextNode(key));
-        }
-        if(next_node == NULL){
-            // storage node has been deleted, then start from the last possible index node
-            if(last_node->prev == &starts[0]){
-                return NULL;
+            if(next_node == NULL){
+                printf("down route not found, go to the next index node on level %d\n", current_level);
+                next_node = last_node->next;
+                if(next_node == &ends[current_level]){
+                    printf("reach end of index layer\n");
+                    int tmp_index = last_node->indexes[last_node->index_size-1];
+                    next_node = (IndexNode*)(last_node->routeToNextNode(tmp_index));
+                    current_level--;
+                }
             }else{
-                return (Node*)last_node->prev->routeToNextNode(key);
+                current_level--;
             }
         }
         return (Node*) next_node;
-
     }
+
     // give start node of storage layer, rebuild the index layer
     // todo use ISPC to help rebuild each slice of index layer
-    void rebuild(Node* start){
+    void build(Node* head, Node* tail){
         // store current index node of each level
         IndexNode* leveled_nodes[MAX_HEIGHT];
-        // store number of indexes per current index node
-//        int leveled_nodes_count[MAX_HEIGHT];
         // store the number of indexes exists in each index node
         int level_index_count[MAX_HEIGHT];
         // routing key is in the format of "0000...1111", each time insert an index, replace the corresponding char to 0
         std::string routing_keys[MAX_HEIGHT];
         std::string initial_key = std::string(VECTOR_SIZE, '1');
+        std::string end_key = std::string(VECTOR_SIZE, '0');
         for(int i = 0; i < MAX_HEIGHT; i++){
             leveled_nodes[i] = &starts[i];
             level_index_count[i] = VECTOR_SIZE-1;
+            routing_keys[i] = initial_key;
         }
-        Node* cur = start;
-        do{
+        Node* cur = head;
+        while (get_node_address((cur=cur->next)) != tail){
+            printf("current node key %d index height %d\n", cur->key, cur->height);
+            if(get_is_delete(cur->next)){
+                cur->next = set_confirm_delete(cur->next);
+            }
             if(cur->height > 0) {
-                build_index_node(leveled_nodes, level_index_count, VECTOR_SIZE, MAX_HEIGHT, cur->height, cur->key,
-                                 routing_keys, initial_key);
-                set_node_pointer(leveled_nodes, routing_keys, level_index_count, MAX_HEIGHT, cur->height);
-                leveled_nodes[0]->routing_table[routing_keys[0]] = cur;
-                if(level_index_count[0] == 1){
-                    cur->is_start_node = true;
+//                build_index_node(leveled_nodes, level_index_count, VECTOR_SIZE, MAX_HEIGHT, cur->height, cur->key,
+//                                 routing_keys, initial_key);
+//                set_node_pointer(leveled_nodes, routing_keys, level_index_count, MAX_HEIGHT, cur->height);
+                for(int i = 0; i < cur->height; i++){
+                    IndexNode* node = leveled_nodes[i];
+                    node->indexes[level_index_count[i]] = cur->key;
+                    printf("push key %d into index node %p on level %d, current node index size %d\n", cur->key, node,
+                           i, level_index_count[i]+1);
+                    routing_keys[i][level_index_count[i]] = '0';
+                    if(i != 0){
+                        node->routing_table[routing_keys[i]] = leveled_nodes[i-1];
+                        printf("node %p route to index node %p on compare result %s\n", node, leveled_nodes[i-1], routing_keys[i].c_str());
+                    }else{
+                        leveled_nodes[0]->routing_table[routing_keys[0]] = cur;
+                        printf("node %p route to storage node %p on compare result %s\n", node, cur, routing_keys[0].c_str());
+                    }
+                    if(++level_index_count[i] == VECTOR_SIZE){
+                        printf("node %p index vector full\n", node);
+                        IndexNode* new_node = new IndexNode();
+                        new_node->indexes[0] = cur->key;
+                        leveled_nodes[i] = new_node;
+                        level_index_count[i] = 1;
+                        routing_keys[i] = initial_key;
+                        node->routing_table[end_key] = NULL;
+                        node->next = new_node;
+                        routing_keys[i][0] = '0';
+                        if(i != 0) {
+                            new_node->routing_table[routing_keys[i]] = leveled_nodes[i-1];
+                        }else{
+                            new_node->routing_table[routing_keys[i]] = cur;
+                        }
+                    }
                 }
             }
-        }while((cur = cur->next)!=NULL);
+        }
         for(int i = 0; i < MAX_HEIGHT; i++){
+            leveled_nodes[i]->index_size = level_index_count[i];
             leveled_nodes[i]->next = &ends[i];
+            leveled_nodes[i]->routing_table[end_key] = NULL;
+            if( i == 0 ){
+                starts[i].next->routing_table[initial_key] = head->next;
+            }else{
+                starts[i].next->routing_table[initial_key] = starts[i-1].next;
+            }
         }
     }
 };
 #endif //CSTORE_SKIPLIST_H
-

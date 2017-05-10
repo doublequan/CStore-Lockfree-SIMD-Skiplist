@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include <atomic>
 #include <mutex>
+#include <stdlib.h>
+#include <time.h>
+#include "constants.h"
 
 /**
  * is_delete flag utilize the last digit of node address,
@@ -33,7 +36,7 @@ public:
     int value;
     Node *next;
 
-    Node(int k, int v) : key(k), value(v), next(NULL) {}
+    Node(int k, int v, int h) : key(k), value(v), next(NULL), height(h) {}
 
     void to_string() {
         printf("%d", key);
@@ -51,9 +54,10 @@ public:
     Node *tail;
 
     lockfreeList() {
-        head = new Node(NULL, NULL);
-        tail = new Node(NULL, NULL);
+        head = new Node(NULL, NULL, rand() % (MAX_HEIGHT+1) );
+        tail = new Node(NULL, NULL, rand() % (MAX_HEIGHT+1));
         head->next = tail;
+        srand (time(NULL));
     }
 
     ~lockfreeList() {
@@ -61,7 +65,7 @@ public:
     }
 
     void insert(int key, int value) {
-        Node *new_node = new Node(key, value);
+        Node *new_node = new Node(key, value, rand() % (MAX_HEIGHT+1));
         Node *right_node, *left_node;
 
         while (true) {
@@ -182,4 +186,3 @@ public:
 
 
 #endif //CLION_LOCKFREE_LIST_H
-
