@@ -20,7 +20,7 @@
 #include "Node.h"
 
 
-//#define ISPC
+#define ISPC
 #ifdef ISPC
 #include "compare_ispc.h"
 
@@ -314,7 +314,7 @@ public:
 //            leveled_nodes[i]->routing_table[end_key] = NULL;
             if (i == 0) {
 //                starts[i].next->routing_table[initial_key] = head->next;
-                starts[i].next->routing_array[0] = head->next;
+                starts[i].next->routing_array[0] = head;
             } else {
 //                starts[i].next->routing_table[initial_key] = starts[i-1].next;
                 starts[i].next->routing_array[0] = starts[i - 1].next;

@@ -49,6 +49,8 @@ void testConcurrentSortedLinkedList() {
 
 */
 
+#define TEST_SET_SIZE 10000
+#define THREAD_NUM 32
 
 
 void *insert_task_List(void *ptr) {
@@ -56,7 +58,7 @@ void *insert_task_List(void *ptr) {
     int thread_id = p->thread_id;
     int thread_num = p->thread_num;
     LockfreeList *list = (LockfreeList *) p->ptr;
-    for (int i = thread_id; i < 100000; i += thread_num) {
+    for (int i = thread_id; i < TEST_SET_SIZE; i += thread_num) {
         list->insert(i, i);
     }
 //    for (int i = 0; i < 1000000; i++) {
@@ -65,13 +67,28 @@ void *insert_task_List(void *ptr) {
 //    }
 }
 
+void *read_task_List(void *ptr) {
+    Param *p = (Param *) ptr;
+    int thread_id = p->thread_id;
+    int thread_num = p->thread_num;
+    LockfreeList *list = (LockfreeList *) p->ptr;
+    for (int i = thread_id; i < TEST_SET_SIZE; i += thread_num) {
+        list->find(i);
+    }
+//    for (int i = 0; i < 1000000; i++) {
+//        unsigned int n = list->intRand(0, 1000000);
+//        list->insert(n, n);
+//    }
+}
+
+
 void *delete_task(void *ptr) {
     Param *p = (Param *) ptr;
     int thread_id = p->thread_id;
     int thread_num = p->thread_num;
     LockfreeList *list = (LockfreeList *) p->ptr;
-    for (int i = thread_id; i < 100000; i += thread_num) {
-        printf("[%d] removing key %d \n", thread_id, i);
+    for (int i = thread_id; i < TEST_SET_SIZE; i += thread_num) {
+//        printf("[%d] removing key %d \n", thread_id, i);
         list->remove(i);
     }
 //    for (int i = 0; i < 1000000; i++) {
@@ -81,27 +98,55 @@ void *delete_task(void *ptr) {
 }
 
 
+//void *testrun(void* ptr){
+//    Param *p = (Param *) ptr;
+//    int thread_id = p->thread_id;
+//    int thread_num = p->thread_num;
+//    static thread_local std::mt19937 generator(time(0));
+//    std::uniform_int_distribution<int> distribution(0,TEST_SET_SIZE);
+//    std::uniform_int_distribution<int> distribution2(0,10);
+//    // double totalIndexTime = 0;
+//    // double totalStorageTime = 0;
+//    for(int i = 0; i < THREAD_GET_COUNT; i++) {
+//        int key = distribution(generator);
+//        int type = distribution2(generator);
+//
+//        // double indexStartTime = CycleTimer::currentSeconds();
+////    printf("key: %d", key);
+//        Node *n = layer->find(key);
+//        // double indexEndTime = CycleTimer::currentSeconds();
+//        // totalIndexTime += indexEndTime - indexStartTime;
+////    printf("find %d, return node %d\n", key, n->key);
+//        Node *tmp;
+//        // double storageStartTime = CycleTimer::currentSeconds();
+//        if(n->key != key) {
+//            Node *result = list->search_after(n, key, tmp);
+//            if (result->key != key) {
+//                printf("find error!");
+//            };
+//        }
+//        // double storageEndTime = CycleTimer::currentSeconds();
+//        // totalStorageTime += storageEndTime - storageStartTime;
+//    }
+//    // printf("time compare %f\n", totalIndexTime/totalStorageTime);
+//}
+
+
 void testTestList() {
     LockfreeList *list = new LockfreeList();
 
-    int len;
-    len = list->to_string();
-    printf("length: %d\n", len);
-
-//    Param *p = new Param();
-//    p->ptr = (void *) list;
-//    p->thread_num = 4;
-
     BenchMark benchMark;
-    benchMark.run(4, insert_task_List, (void *) list);
+    benchMark.run(THREAD_NUM, insert_task_List, (void *) list);
 
     printf("after insert\n");
 
-    benchMark.run(4, delete_task, (void *) list);
+    benchMark.run(THREAD_NUM, read_task_List, (void *) list);
+
+    benchMark.run(THREAD_NUM, delete_task, (void *) list);
 
 
-    len = list->to_string();
-    printf("length: %d\n", len);
+//    len = list->to_string();
+//    printf("length: %d\n", len);
 
 //    list->remove(999);
 //    list->remove(998);

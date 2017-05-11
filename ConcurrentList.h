@@ -72,7 +72,6 @@ public:
 #ifdef INDEX_DEBUG
         index_layer = new IndexLayer();
         index_layer->build(head, tail);
-        index_layer->print_index_layers();
         index_ready = true;
 #endif
         pthread_create(&background_thread, NULL, background_job, (void *) this);
@@ -309,30 +308,30 @@ void *background_job(void *ptr) {
         if (counter >= REBUILD_THRESHOLD) {
             IndexLayer *old_index_layer = lockfreeList->index_layer;
 
-            printf("got old index layer\n");
+//            printf("got old index layer\n");
 
             IndexLayer *new_index_layer = new IndexLayer();
             new_index_layer->build(lockfreeList->head, lockfreeList->tail);
 
 //            new_index_layer->print_index_layers();
 
-            printf("created and built new index layer\n");
+//            printf("created and built new index layer\n");
 
             lockfreeList->index_layer = new_index_layer;
 
             while (lockfreeList->global_counter
                    != old_index_layer->ongoing_query_counter
                       + new_index_layer->ongoing_query_counter) {
-                printf("waiting");
+//                printf("waiting");
                 usleep(1000);
             }
 
             while (old_index_layer->ongoing_query_counter != 0) {
-                printf("waiting...");
+//                printf("waiting...");
                 usleep(1000);
             }
 
-            printf("Going to free old index layer\n");
+//            printf("Going to free old index layer\n");
 //            free(old_index_layer);
 
             lockfreeList->modification_counter = 0;
