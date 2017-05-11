@@ -58,7 +58,7 @@ public:
 
 void *insert_task_List(void *ptr) {
     PTR *p = (PTR *) ptr;
-    for (int i = 1; i < 10; i += 1) {
+    for (int i = 1; i < 100000; i += 1) {
         p->list->insert(i, 0);
 //        printf("insert randomly %d\n", i);
     }
@@ -66,7 +66,7 @@ void *insert_task_List(void *ptr) {
 
 void *delete_task(void *ptr) {
     PTR *p = (PTR *) ptr;
-    for (int i = 1; i < 10; i += 1) {
+    for (int i = 1; i < 100000; i += 1) {
         p->list->remove(i);
 //        printf("insert randomly %d\n", i);
     }
@@ -111,34 +111,44 @@ void testTestList() {
 
     printf("after insert\n");
 
-//    benchMark.run(2, delete_task, (void *) p);
+    benchMark.run(1, delete_task, (void *) p);
 
-    pthread_t thread;
-    pthread_create(&thread, NULL, delete_task, (void *)p);
+//    pthread_t thread;
+//    pthread_create(&thread, NULL, delete_task, (void *)p);
 
-    pthread_join(thread, NULL);
 
-    Node *cur = list->head;
-    Node *last = NULL;
-    while ((cur = get_node_address(cur->next)) != list->tail) {
-        if (last != NULL) {
-            last->next = set_confirm_delete(last->next);
-            last = NULL;
-        }
-        if (get_is_delete(cur->next)) {
-            last = cur;
-        }
-//        for(int i=0; i<100000;i++);
-        usleep(1000);
-    }
-    if (last != NULL) {
-        last->next = set_confirm_delete(last->next);
-        last = NULL;
-    }
+//    Node *cur = list->head;
+//    Node *last = NULL;
+//    while ((cur = get_node_address(cur->next)) != list->tail) {
+//        if (last != NULL) {
+//            last->next = set_confirm_delete(last->next);
+//            last = NULL;
+//        }
+//        if (get_is_delete(cur->next)) {
+//            last = cur;
+//        }
+////        for(int i=0; i<100000;i++);
+//        usleep(1000);
+//    }
+//    if (last != NULL) {
+//        last->next = set_confirm_delete(last->next);
+//        last = NULL;
+//    }
+
+//    pthread_join(thread, NULL);
+
 
 //    list->insert(990, 0);
 
 //    benchMark.mix_run(thread_nums, funcs, (void **) ptrs, 2);
+
+//    printf("find result %d\n", list->find(25));
+
+    sleep(5);
+
+    list->insert(1000000000, 1);
+    Node *left = new Node(0,0,0);
+    list->search_after(list->head, 100000000, left);
 
 
     len = list->to_string();
@@ -177,7 +187,8 @@ void testTestList() {
 
 //    assert(list->find(6));
 
-//    sleep(1);
+
+
 
 }
 

@@ -13,6 +13,8 @@
 #define get_confirm_delete(address) ((int)((uintptr_t)address & 0x00000002) == 2 ?1:0)
 #define get_node_address(address) ((Node *)((uintptr_t)address & -4))
 
+#define set_flags(address, a, b) ((Node *) (((uintptr_t)address & -4) | (a * 2 + b)))
+
 #define copy_mask(src, dest) ((Node *) (((uintptr_t) dest & -4) | ((uintptr_t) src & 3)))
 
 #define get_node_address_ignore_last_digit(address) ((Node *)((uintptr_t)address & -2))

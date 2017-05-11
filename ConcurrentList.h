@@ -10,7 +10,7 @@
 #include "constants.h"
 #include "Node.h"
 
-//#define INDEX_DEBUG
+#define INDEX_DEBUG
 
 #ifdef INDEX_DEBUG
 
@@ -57,6 +57,9 @@ public:
 
 
     LockfreeList() {
+        global_counter = 0;
+        modification_counter = 0;
+
         head = new Node(NULL, NULL, randomLevel());
         tail = new Node(NULL, NULL, randomLevel());
         head->next = tail;
@@ -69,6 +72,7 @@ public:
 #ifdef INDEX_DEBUG
         index_layer = new IndexLayer();
         index_layer->build(head, tail);
+        index_layer->print_index_layers();
         index_ready = true;
 #endif
         pthread_create(&background_thread, NULL, background_job, (void *) this);
@@ -98,9 +102,10 @@ public:
         }
 
 #ifdef INDEX_DEBUG
-        IndexLayer *indexLayer = index_layer;
 
         global_counter++;
+
+        IndexLayer *indexLayer = index_layer;
 
         indexLayer->ongoing_query_counter++;
 
@@ -159,6 +164,8 @@ public:
         do {
             Node *t = start_node;
             Node *t_next = start_node->next;
+            left_node = start_node;
+            left_node_next = start_node->next;
             /* Find left and right node */
             do {
                 if (!get_confirm_delete(t_next)) {
@@ -268,7 +275,7 @@ public:
     void load_data() {
 #ifdef INDEX_DEBUG
         for (int i = 100; i >= 0; i--) {
-            insert(i, 1);
+            insert(i, i);
         }
         modification_counter = 0;
 #endif
@@ -285,7 +292,7 @@ void *background_job(void *ptr) {
 
     while (true) {
         unsigned counter = lockfreeList->modification_counter;
-        printf("[Background] : %u\n", counter);
+//        printf("[Background] : %u\n", counter);
 
         if (counter >= REBUILD_THRESHOLD) {
             IndexLayer *old_index_layer = lockfreeList->index_layer;
@@ -294,6 +301,8 @@ void *background_job(void *ptr) {
 
             IndexLayer *new_index_layer = new IndexLayer();
             new_index_layer->build(lockfreeList->head, lockfreeList->tail);
+
+//            new_index_layer->print_index_layers();
 
             printf("created and built new index layer\n");
 
@@ -312,13 +321,13 @@ void *background_job(void *ptr) {
             }
 
             printf("Going to free old index layer\n");
-            free(old_index_layer);
+//            free(old_index_layer);
 
             lockfreeList->modification_counter = 0;
 
         }
 
-        usleep(10000);
+        usleep(1000);
     }
 
 #endif

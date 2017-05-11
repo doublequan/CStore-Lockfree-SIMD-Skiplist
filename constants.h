@@ -5,7 +5,7 @@
 #ifndef CSTORE_CONSTANTS_H
 #define CSTORE_CONSTANTS_H
 
-#define MAX_HEIGHT 20
+#define MAX_HEIGHT 22
 #define VECTOR_SIZE 8
 
 #define REBUILD_THRESHOLD 50
