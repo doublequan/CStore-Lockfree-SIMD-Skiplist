@@ -3,7 +3,7 @@
 #include "BenchMark.h"
 //#include "ConcurrentLinkedList.h"
 #include "ConcurrentList.h"
-#include "Skiplist.h"
+//#include "Skiplist.h"
 
 /*
 void *insert_task(void *ptr) {
@@ -58,8 +58,7 @@ public:
 
 void *insert_task_List(void *ptr) {
     PTR *p = (PTR *) ptr;
-    for (int i = 1; i < 100; i += 1) {
-        Node *n = new Node(i, 0, 20);
+    for (int i = 1; i < 10; i += 1) {
         p->list->insert(i, 0);
 //        printf("insert randomly %d\n", i);
     }
@@ -67,7 +66,7 @@ void *insert_task_List(void *ptr) {
 
 void *delete_task(void *ptr) {
     PTR *p = (PTR *) ptr;
-    for (int i = 1; i < 100; i += 1) {
+    for (int i = 1; i < 10; i += 1) {
         p->list->remove(i);
 //        printf("insert randomly %d\n", i);
     }
@@ -101,18 +100,49 @@ void testTestList() {
 
     PTR *p = new PTR();
     p->list = list;
-    p->thread_num = 32;
+//    p->thread_num = 32;
 
-    func_t funcs[] = {insert_task_List, delete_task};
-    int thread_nums[] = {10, 10};
-    PTR *ptrs[] = {p, p};
+//    func_t funcs[] = {insert_task_List, delete_task};
+//    int thread_nums[] = {10, 20};
+//    PTR *ptrs[] = {p, p};
 
     BenchMark benchMark;
-//    benchMark.run(32, insert_task_List, (void *) p);
+    benchMark.run(1, insert_task_List, (void *) p);
+
+    printf("after insert\n");
+
+//    benchMark.run(2, delete_task, (void *) p);
+
+    pthread_t thread;
+    pthread_create(&thread, NULL, delete_task, (void *)p);
+
+    pthread_join(thread, NULL);
+
+    Node *cur = list->head;
+    Node *last = NULL;
+    while ((cur = get_node_address(cur->next)) != list->tail) {
+        if (last != NULL) {
+            last->next = set_confirm_delete(last->next);
+            last = NULL;
+        }
+        if (get_is_delete(cur->next)) {
+            last = cur;
+        }
+//        for(int i=0; i<100000;i++);
+        usleep(1000);
+    }
+    if (last != NULL) {
+        last->next = set_confirm_delete(last->next);
+        last = NULL;
+    }
+
+//    list->insert(990, 0);
+
 //    benchMark.mix_run(thread_nums, funcs, (void **) ptrs, 2);
 
-//    len = list->to_string();
-//    printf("length: %d\n", len);
+
+    len = list->to_string();
+    printf("length: %d\n", len);
 
 //    list->remove(999);
 //    list->remove(998);
@@ -120,25 +150,25 @@ void testTestList() {
 //    list->remove(996);
 //    list->remove(5);
 //    list->remove(8);
-    list->insert(50, 0);
-    list->insert(49, 0);
-//    list->remove(1);
-    list->remove(50);
-//    list->remove(8);
-    list->insert(51, 0);
-    list->insert(50, 0);
-    list->remove(50);
-    list->insert(50, 0);
-    for (int i = 10000; i < 10100; i++) {
-        list->insert(i, 1);
-    }
-    list->insert(50, 0);
+//    list->insert(50, 0);
+//    list->insert(49, 0);
+////    list->remove(1);
+//    list->remove(50);
+////    list->remove(8);
+//    list->insert(51, 0);
+//    list->insert(50, 0);
+//    list->remove(50);
+//    list->insert(50, 0);
+//    for (int i = 10000; i < 10100; i++) {
+//        list->insert(i, 1);
+//    }
+//    list->insert(50, 0);
 
 //    assert(list->find(50));
 //    list->remove(3);
 
-    len = list->to_string();
-    printf("length: %d\n", len);
+//    len = list->to_string();
+//    printf("length: %d\n", len);
 
 
 //    Node *left = new Node(-1);
@@ -147,7 +177,7 @@ void testTestList() {
 
 //    assert(list->find(6));
 
-    sleep(1);
+//    sleep(1);
 
 }
 

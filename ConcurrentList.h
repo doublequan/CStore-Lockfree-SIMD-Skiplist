@@ -10,7 +10,7 @@
 #include "constants.h"
 #include "Node.h"
 
-#define INDEX_DEBUG
+//#define INDEX_DEBUG
 
 #ifdef INDEX_DEBUG
 
@@ -129,11 +129,12 @@ public:
                 && (get_node_address(right_node)->key == key))
                 return; //false;
             get_node_address(new_node)->next = get_node_address(right_node);
-            if (get_is_delete(get_node_address(left_node)->next)) {
-                new_node = set_is_delete(new_node);
-            } else {
-                new_node = get_node_address(new_node);
-            }
+//            if (get_is_delete(get_node_address(left_node)->next)) {
+//                new_node = set_is_delete(new_node);
+//            } else {
+//                new_node = get_node_address(new_node);
+//            }
+            new_node = copy_mask(get_node_address(left_node)->next, new_node);
             if (__sync_bool_compare_and_swap(&get_node_address(left_node)->next, right_node, new_node)) {
 
                 modification_counter++;
@@ -182,7 +183,10 @@ public:
                     return right_node;
                 }
             }
-            if (__sync_bool_compare_and_swap(&((left_node)->next), left_node_next, right_node)) { // RIGHT HERE
+
+            Node *masked_right_node = copy_mask((left_node)->next, right_node);
+
+            if (__sync_bool_compare_and_swap(&((left_node)->next), left_node_next, masked_right_node)) { // RIGHT HERE
                 if ((get_node_address(right_node) != tail) && get_confirm_delete(get_node_address(right_node)->next)) {
                     goto SEARCH_AGAIN;
                 } else {
@@ -197,7 +201,7 @@ public:
         Node *right_node = NULL, *right_node_next = NULL, *left_node = NULL;
         while (true) {
 //            right_node = search_after(index_layer->find(key), key, left_node);
-            right_node = search_by_index(key, left_node);
+            right_node = get_node_address(search_by_index(key, left_node));
             if ((right_node == tail) || (right_node->key != key)) {
                 return;
             }// false;
@@ -210,6 +214,8 @@ public:
 
                     break;
                 }
+            } else {
+                return;
             }
         }
         // try to physically delete the node
@@ -244,6 +250,9 @@ public:
             if (!get_is_delete(cur->next)) {
                 count++;
             } else {
+                if (get_confirm_delete(cur->next)) {
+                    printf("C:");
+                }
                 printf("D:");
             }
             cur->to_string();
@@ -257,15 +266,20 @@ public:
      * Non-thread-safe
      */
     void load_data() {
+#ifdef INDEX_DEBUG
         for (int i = 100; i >= 0; i--) {
             insert(i, 1);
         }
         modification_counter = 0;
+#endif
+
     }
 };
 
 
 void *background_job(void *ptr) {
+
+#ifdef INDEX_DEBUG
 
     LockfreeList *lockfreeList = (LockfreeList *) ptr;
 
@@ -306,6 +320,8 @@ void *background_job(void *ptr) {
 
         usleep(10000);
     }
+
+#endif
 }
 
 #endif //CLION_LOCKFREE_LIST_H

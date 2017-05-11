@@ -202,12 +202,18 @@ public:
 //            routing_keys[i] = initial_key;
         }
         Node *cur = head;
+        Node *last = NULL;
         while ((cur = get_node_address(cur->next)) != tail) {
 #ifdef DEBUG
             printf("current node key %d index height %d\n", cur->key, cur->height);
 #endif
+            if (last != NULL) {
+                last->next = set_confirm_delete(last->next);
+                last = NULL;
+            }
             if (get_is_delete(cur->next)) {
-                cur->next = set_confirm_delete(cur->next);
+                last = cur;
+//                cur->next = set_confirm_delete(cur->next);
             }
             else if (cur->height > 0) {
 //                build_index_node(leveled_nodes, level_index_count, VECTOR_SIZE, MAX_HEIGHT, cur->height, cur->key,
@@ -258,6 +264,10 @@ public:
                     }
                 }
             }
+        }
+        if (last != NULL) {
+            last->next = set_confirm_delete(last->next);
+            last = NULL;
         }
         for (int i = 0; i < MAX_HEIGHT; i++) {
             leveled_nodes[i]->index_size = level_index_count[i];
