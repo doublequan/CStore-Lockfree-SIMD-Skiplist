@@ -11,11 +11,20 @@
 #include <xmmintrin.h>
 #include <unordered_map>
 #include <iostream>
-//#include "compare_ispc.h"
+
+
+
 //#include "build_index_node_ispc.h"
 #include "ConcurrentList.h"
 #include "constants.h"
 #include "Node.h"
+
+
+//#define ISPC
+#ifdef ISPC
+#include "compare_ispc.h"
+
+#endif
 
 // #define DEBUG
 class IndexNode{
@@ -43,9 +52,12 @@ public:
 //        int8_t result_char[VECTOR_SIZE];
 //        index_compare_ispc( indexes, key, index_size, result);
         // std::string result = compare(key);
+#ifdef ISPC
         uint8_t result[VECTOR_SIZE];
         ispc::index_compare_ispc( indexes, key, VECTOR_SIZE, index_size, result);
-//        uint8_t* result = compare(key);
+#else
+        uint8_t* result = compare(key);
+#endif
         int pop_count = __builtin_popcountl(*((uint64_t*)result));
         if(pop_count == 0){
             return NULL;

@@ -1,5 +1,5 @@
 CXX=g++ -m64
-CXXFLAGS=-I../common -Iobjs/ -O3 -Wall -lpthread
+CXXFLAGS=-I../common -Iobjs/ -O3 -Wall -lpthread -w
 ISPC=ispc
 # note: change target to avx-x2 for AVX capable machines
 ISPCFLAGS=-O2 --target=avx-x2 --arch=x86-64
