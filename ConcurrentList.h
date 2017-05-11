@@ -248,9 +248,6 @@ public:
 //        right_node = search_after(index_layer->find(key), key, left_node);
         right_node = search_by_index(key, left_node);
         if ((right_node == tail) || (right_node->key != key)) {
-
-            printf("find error");
-
             return NULL;
         } else {
             return right_node->value;
@@ -285,9 +282,9 @@ public:
      */
     void load_data() {
 #ifdef INDEX_DEBUG
-//        for (int i = 100; i >= 0; i--) {
-//            insert(i, i);
-//        }
+        for (int i = INIT_SET_SIZE; i >= 0; i--) {
+            insert(i, i);
+        }
         modification_counter = 0;
 #endif
 

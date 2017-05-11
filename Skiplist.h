@@ -20,7 +20,7 @@
 #include "Node.h"
 
 
-#define ISPC
+//#define ISPC
 #ifdef ISPC
 #include "compare_ispc.h"
 
