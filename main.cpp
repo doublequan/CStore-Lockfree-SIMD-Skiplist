@@ -49,47 +49,37 @@ void testConcurrentSortedLinkedList() {
 
 */
 
-class PTR {
-public:
-    LockfreeList *list;
-    int thread_id;
-    int thread_num;
-};
+
 
 void *insert_task_List(void *ptr) {
-    PTR *p = (PTR *) ptr;
-    for (int i = 1; i < 100000; i += 1) {
-        p->list->insert(i, 0);
-//        printf("insert randomly %d\n", i);
+    Param *p = (Param *) ptr;
+    int thread_id = p->thread_id;
+    int thread_num = p->thread_num;
+    LockfreeList *list = (LockfreeList *) p->ptr;
+    for (int i = thread_id; i < 100000; i += thread_num) {
+        list->insert(i, i);
     }
+//    for (int i = 0; i < 1000000; i++) {
+//        unsigned int n = list->intRand(0, 1000000);
+//        list->insert(n, n);
+//    }
 }
 
 void *delete_task(void *ptr) {
-    PTR *p = (PTR *) ptr;
-    for (int i = 1; i < 100000; i += 1) {
-        p->list->remove(i);
-//        printf("insert randomly %d\n", i);
+    Param *p = (Param *) ptr;
+    int thread_id = p->thread_id;
+    int thread_num = p->thread_num;
+    LockfreeList *list = (LockfreeList *) p->ptr;
+    for (int i = thread_id; i < 100000; i += thread_num) {
+        printf("[%d] removing key %d \n", thread_id, i);
+        list->remove(i);
     }
+//    for (int i = 0; i < 1000000; i++) {
+//        unsigned int n = list->intRand(0, 1000000);
+//        list->remove(n);
+//    }
 }
 
-//int count1 = 0;
-//int count2 = 0;
-std::atomic<unsigned int> count1;
-std::atomic<unsigned int> count2;
-
-void *test(void *p) {
-//    int *count = (int *) p;
-    for (int i = 0; i < 10000; i++) {
-        count1++;
-        count2++;
-
-        int loop = rand() % 1000 + 1000;
-        while (loop > 0) loop--;
-
-        count2--;
-        count1--;
-    }
-}
 
 void testTestList() {
     LockfreeList *list = new LockfreeList();
@@ -98,57 +88,16 @@ void testTestList() {
     len = list->to_string();
     printf("length: %d\n", len);
 
-    PTR *p = new PTR();
-    p->list = list;
-//    p->thread_num = 32;
-
-//    func_t funcs[] = {insert_task_List, delete_task};
-//    int thread_nums[] = {10, 20};
-//    PTR *ptrs[] = {p, p};
+//    Param *p = new Param();
+//    p->ptr = (void *) list;
+//    p->thread_num = 4;
 
     BenchMark benchMark;
-    benchMark.run(1, insert_task_List, (void *) p);
+    benchMark.run(4, insert_task_List, (void *) list);
 
     printf("after insert\n");
 
-    benchMark.run(1, delete_task, (void *) p);
-
-//    pthread_t thread;
-//    pthread_create(&thread, NULL, delete_task, (void *)p);
-
-
-//    Node *cur = list->head;
-//    Node *last = NULL;
-//    while ((cur = get_node_address(cur->next)) != list->tail) {
-//        if (last != NULL) {
-//            last->next = set_confirm_delete(last->next);
-//            last = NULL;
-//        }
-//        if (get_is_delete(cur->next)) {
-//            last = cur;
-//        }
-////        for(int i=0; i<100000;i++);
-//        usleep(1000);
-//    }
-//    if (last != NULL) {
-//        last->next = set_confirm_delete(last->next);
-//        last = NULL;
-//    }
-
-//    pthread_join(thread, NULL);
-
-
-//    list->insert(990, 0);
-
-//    benchMark.mix_run(thread_nums, funcs, (void **) ptrs, 2);
-
-//    printf("find result %d\n", list->find(25));
-
-    sleep(5);
-
-    list->insert(1000000000, 1);
-    Node *left = new Node(0,0,0);
-    list->search_after(list->head, 100000000, left);
+    benchMark.run(4, delete_task, (void *) list);
 
 
     len = list->to_string();

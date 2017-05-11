@@ -12,6 +12,14 @@
 typedef void *(*func_t)(void *);
 
 
+class Param {
+public:
+    void *ptr;
+    int thread_id;
+    int thread_num;
+};
+
+
 class BenchMark {
 private:
 public:
@@ -23,7 +31,12 @@ public:
         double startTime = CycleTimer::currentSeconds();
 
         for (int i = 0; i < thread_num; i++) {
-            pthread_create(&threads[i], NULL, f, ptr);
+            Param *p = new Param();
+            p->ptr = ptr;
+            p->thread_id = i;
+            p->thread_num = thread_num;
+
+            pthread_create(&threads[i], NULL, f, p);
         }
 
         for (int i = 0; i < thread_num; i++) {
@@ -72,6 +85,7 @@ public:
         int thread_count = 0;
         for (int n = 0; n < num; n++) {
             for (; thread_count < thread_nums[n]; thread_count++) {
+                ((Param **) ptrs)[n]->thread_id = thread_count;
                 pthread_create(&threads[thread_count], NULL, f[n], ptrs[n]);
             }
         }

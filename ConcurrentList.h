@@ -73,7 +73,7 @@ public:
         index_layer = new IndexLayer();
         index_layer->build(head, tail);
         index_layer->print_index_layers();
-        index_ready = true;
+//        index_ready = true;
 #endif
         pthread_create(&background_thread, NULL, background_job, (void *) this);
     }
@@ -162,8 +162,12 @@ public:
 
         SEARCH_AGAIN:
         do {
+
+//            if (get_confirm_delete(head))
+
             Node *t = start_node;
             Node *t_next = start_node->next;
+
             left_node = start_node;
             left_node_next = start_node->next;
             /* Find left and right node */
@@ -193,7 +197,7 @@ public:
 
             Node *masked_right_node = copy_mask((left_node)->next, right_node);
 
-            if (__sync_bool_compare_and_swap(&((left_node)->next), left_node_next, masked_right_node)) { // RIGHT HERE
+            if (__sync_bool_compare_and_swap(&((get_node_address(left_node))->next), left_node_next, masked_right_node)) { // RIGHT HERE
                 if ((get_node_address(right_node) != tail) && get_confirm_delete(get_node_address(right_node)->next)) {
                     goto SEARCH_AGAIN;
                 } else {
@@ -210,18 +214,26 @@ public:
 //            right_node = search_after(index_layer->find(key), key, left_node);
             right_node = get_node_address(search_by_index(key, left_node));
             if ((right_node == tail) || (right_node->key != key)) {
+                printf("wrong return\n");
                 return;
             }// false;
             right_node_next = right_node->next;
             if (!get_is_delete(right_node_next)) {
+
+                printf("right_node key %d, next: %p\n", right_node->key, right_node->next);
+
                 if (__sync_bool_compare_and_swap(&(right_node->next), right_node_next,
                                                  set_is_delete(right_node_next))) {
+
+                    printf("[success] right_node key %d, next: %p\n", right_node->key, right_node->next);
 
                     modification_counter++;
 
                     break;
                 }
-            } else {
+            }
+            else {
+                printf("is deleted worong return, target key: %d, found key: %d \n", key, right_node->key);
                 return;
             }
         }
@@ -274,9 +286,9 @@ public:
      */
     void load_data() {
 #ifdef INDEX_DEBUG
-        for (int i = 100; i >= 0; i--) {
-            insert(i, i);
-        }
+//        for (int i = 100; i >= 0; i--) {
+//            insert(i, i);
+//        }
         modification_counter = 0;
 #endif
 
