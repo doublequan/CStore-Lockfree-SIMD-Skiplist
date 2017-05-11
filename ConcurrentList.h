@@ -73,7 +73,7 @@ public:
         index_layer = new IndexLayer();
         index_layer->build(head, tail);
         index_layer->print_index_layers();
-//        index_ready = true;
+        index_ready = true;
 #endif
         pthread_create(&background_thread, NULL, background_job, (void *) this);
     }
@@ -220,12 +220,12 @@ public:
             right_node_next = right_node->next;
             if (!get_is_delete(right_node_next)) {
 
-                printf("right_node key %d, next: %p\n", right_node->key, right_node->next);
+//                printf("right_node key %d, next: %p\n", right_node->key, right_node->next);
 
                 if (__sync_bool_compare_and_swap(&(right_node->next), right_node_next,
                                                  set_is_delete(right_node_next))) {
 
-                    printf("[success] right_node key %d, next: %p\n", right_node->key, right_node->next);
+//                    printf("[success] right_node key %d, next: %p\n", right_node->key, right_node->next);
 
                     modification_counter++;
 
@@ -233,7 +233,7 @@ public:
                 }
             }
             else {
-                printf("is deleted worong return, target key: %d, found key: %d \n", key, right_node->key);
+//                printf("is deleted worong return, target key: %d, found key: %d \n", key, right_node->key);
                 return;
             }
         }
