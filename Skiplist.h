@@ -49,37 +49,27 @@ public:
         print_indexes();
         printf("\n");
 #endif
-//        std::string result = std::string(VECTOR_SIZE, '1');
-//        int8_t result_char[VECTOR_SIZE];
-//        index_compare_ispc( indexes, key, index_size, result);
-        // std::string result = compare(key);
 #ifdef ISPC
-        uint8_t result[VECTOR_SIZE];
-        ispc::index_compare_ispc( indexes, key, VECTOR_SIZE, index_size, result);
-#else
-        uint8_t *result = compare(key);
-#endif
-        int pop_count = __builtin_popcountl(*((uint64_t *) result));
-        if (pop_count == 0) {
+
+        int count = ispc::index_compare_ispc_sum(indexes, key, VECTOR_SIZE, index_size);
+        if(count == 0){
             return NULL;
         }
-        return routing_array[VECTOR_SIZE - pop_count];
-        // uint8_t* result = compare(key);
+        return routing_array[VECTOR_SIZE - count];
+#else
+        for(int i = 0; i < index_size; i++){
+            if(key < indexes[i]){
+                return routing_array[i];
+            }
+        }
+        if(index_size < VECTOR_SIZE){
+            return routing_array[index_size];
+        }
+        return NULL;
+#endif
 #ifdef DEBUG
         printf("compare result %s, going to node %p\n", result.c_str(), routing_table[result]);
 #endif
-        // if(result[index_size-1] == 1) {
-        //     for (int i = index_size - 2; i >= 0; i--) {
-        //         if (result[i] == 0) {
-        //             return routing_array[i+1];
-        //         }
-        //     }
-        //     return routing_array[0];
-        // }
-        // if(index_size < VECTOR_SIZE){
-        //     return routing_array[index_size];
-        // }
-        // return NULL;
     }
 
     uint8_t *compare(int key) {
@@ -314,7 +304,7 @@ public:
 //            leveled_nodes[i]->routing_table[end_key] = NULL;
             if (i == 0) {
 //                starts[i].next->routing_table[initial_key] = head->next;
-                starts[i].next->routing_array[0] = head;
+                starts[i].next->routing_array[0] = head->next;
             } else {
 //                starts[i].next->routing_table[initial_key] = starts[i-1].next;
                 starts[i].next->routing_array[0] = starts[i - 1].next;
