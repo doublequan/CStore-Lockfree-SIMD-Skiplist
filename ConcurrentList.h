@@ -203,7 +203,6 @@ public:
         while (true) {
             right_node = get_node_address(search_by_index(key, left_node));
             if ((right_node == tail) || (right_node->key != key)) {
-                printf("wrong return\n");
                 return;
             }// false;
             right_node_next = right_node->next;

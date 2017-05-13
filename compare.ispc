@@ -1,4 +1,4 @@
-export uniform int index_compare_ispc_sum(uniform int indexes[], uniform int key, uniform int max_size,
+export inline uniform int index_compare_ispc_sum(uniform int indexes[], uniform int key, uniform int max_size,
                                uniform int index_size)
 {
  int sum = 0;
@@ -12,7 +12,7 @@ export uniform int index_compare_ispc_sum(uniform int indexes[], uniform int key
     return reduce_add(sum);
 }
 
-export void index_compare_ispc(uniform int indexes[], uniform int key, uniform int max_size,
+export inline void index_compare_ispc(uniform int indexes[], uniform int key, uniform int max_size,
                                uniform int index_size, uniform unsigned int8 result[])
 {
     foreach (i = 0 ... max_size) {
