@@ -57,12 +57,12 @@ public:
         }
         return routing_array[VECTOR_SIZE - count];
 #else
-        for(int i = 0; i < index_size; i++){
-            if(key < indexes[i]){
+        for (int i = 0; i < index_size; i++) {
+            if (key < indexes[i]) {
                 return routing_array[i];
             }
         }
-        if(index_size < VECTOR_SIZE){
+        if (index_size < VECTOR_SIZE) {
             return routing_array[index_size];
         }
         return NULL;
@@ -83,20 +83,6 @@ public:
         }
         return result;
     }
-
-    // std::string compare(int key){
-    //     std::string result = std::string(VECTOR_SIZE, );
-    //     for(int i = 0; i < VECTOR_SIZE; i++){
-    //         if(i < index_size && key >= indexes[i]){
-    //             result[i] = 0;
-    //         }else{
-    //             result[i] = 1;
-    //         }
-    //     }
-    //     result[VECTOR_SIZE] = 0;
-    //     std::string str_result = std::string(result);
-    //     return str_result;
-    // }
 
     void print_indexes() {
         for (int i = 0; i < index_size; i++) {
@@ -204,13 +190,9 @@ public:
         // store the number of indexes exists in each index node
         int level_index_count[MAX_HEIGHT];
         // routing key is in the format of "0000...1111", each time insert an index, replace the corresponding char to 0
-//        std::string routing_keys[MAX_HEIGHT];
-//        std::string initial_key = std::string(VECTOR_SIZE, '1');
-//        std::string end_key = std::string(VECTOR_SIZE, '0');
         for (int i = 0; i < MAX_HEIGHT; i++) {
             leveled_nodes[i] = &starts[i];
             level_index_count[i] = VECTOR_SIZE - 1;
-//            routing_keys[i] = initial_key;
         }
         Node *cur = head;
         Node *last = NULL;
@@ -228,16 +210,11 @@ public:
                         break;
                     }
                 }
-//                last->next = set_confirm_delete(last->next);
-//                last->next = set_flags(last->next, 1, 0);
                 last = NULL;
             }
             if (get_is_delete(cur->next)) {
                 last = cur;
             } else if (cur->height > 0) {
-//                build_index_node(leveled_nodes, level_index_count, VECTOR_SIZE, MAX_HEIGHT, cur->height, cur->key,
-//                                 routing_keys, initial_key);
-//                set_node_pointer(leveled_nodes, routing_keys, level_index_count, MAX_HEIGHT, cur->height);
                 for (int i = 0; i < cur->height; i++) {
                     IndexNode *node = leveled_nodes[i];
                     node->indexes[level_index_count[i]++] = cur->key;
@@ -245,10 +222,8 @@ public:
                     printf("push key %d into index node %p on level %d, current node index size %d\n", cur->key, node,
                            i, level_index_count[i]+1);
 #endif
-//                    routing_keys[i][level_index_count[i]] = '0';
                     if (level_index_count[i] != VECTOR_SIZE) {
                         if (i != 0) {
-//                        node->routing_table[routing_keys[i]] = leveled_nodes[i-1];
                             node->routing_array[level_index_count[i]] = leveled_nodes[i - 1];
 #ifdef DEBUG
                             printf("node %p route to index node %p on compare result %s\n", node, leveled_nodes[i-1], routing_keys[i].c_str());
@@ -269,15 +244,10 @@ public:
                         new_node->indexes[0] = cur->key;
                         leveled_nodes[i] = new_node;
                         level_index_count[i] = 1;
-//                        routing_keys[i] = initial_key;
-//                        node->routing_table[end_key] = NULL;
                         node->next = new_node;
-//                        routing_keys[i][0] = '0';
                         if (i != 0) {
-//                            new_node->routing_table[routing_keys[i]] = leveled_nodes[i-1];
                             new_node->routing_array[1] = leveled_nodes[i - 1];
                         } else {
-//                            new_node->routing_table[routing_keys[i]] = cur;
                             new_node->routing_array[1] = cur;
                         }
                     }
@@ -293,20 +263,14 @@ public:
                     break;
                 }
             }
-
-//            last->next = set_confirm_delete(last->next);
-//            last->next = set_flags(last->next, 1, 0);
             last = NULL;
         }
         for (int i = 0; i < MAX_HEIGHT; i++) {
             leveled_nodes[i]->index_size = level_index_count[i];
             leveled_nodes[i]->next = &ends[i];
-//            leveled_nodes[i]->routing_table[end_key] = NULL;
             if (i == 0) {
-//                starts[i].next->routing_table[initial_key] = head->next;
                 starts[i].next->routing_array[0] = head->next;
             } else {
-//                starts[i].next->routing_table[initial_key] = starts[i-1].next;
                 starts[i].next->routing_array[0] = starts[i - 1].next;
             }
         }

@@ -28,7 +28,6 @@
 
 /**
  * confirm delete flag is used in index_layer rebuild
- * TODO: more details need to be added
  */
 
 
@@ -127,17 +126,11 @@ public:
         Node *right_node, *left_node;
 
         while (true) {
-//            right_node = search_after(head, key, left_node);
             right_node = search_by_index(key, left_node);
             if ((get_node_address(right_node) != tail) && !get_is_delete(get_node_address(right_node)->next)
                 && (get_node_address(right_node)->key == key))
                 return; //false;
             get_node_address(new_node)->next = get_node_address(right_node);
-//            if (get_is_delete(get_node_address(left_node)->next)) {
-//                new_node = set_is_delete(new_node);
-//            } else {
-//                new_node = get_node_address(new_node);
-//            }
             new_node = copy_mask(get_node_address(left_node)->next, new_node);
             if (__sync_bool_compare_and_swap(&get_node_address(left_node)->next, right_node, new_node)) {
 
@@ -162,8 +155,6 @@ public:
         SEARCH_AGAIN:
         do {
 
-//            if (get_confirm_delete(head))
-
             Node *t = start_node;
             Node *t_next = start_node->next;
 
@@ -175,7 +166,6 @@ public:
                     (left_node) = t;
                     left_node_next = t_next;
                 }
-//                t = get_node_address(t_next);
                 t = t_next;
 
                 if (get_node_address(t) == tail) break;
@@ -196,7 +186,8 @@ public:
 
             Node *masked_right_node = copy_mask((left_node)->next, right_node);
 
-            if (__sync_bool_compare_and_swap(&((get_node_address(left_node))->next), left_node_next, masked_right_node)) { // RIGHT HERE
+            if (__sync_bool_compare_and_swap(&((get_node_address(left_node))->next), left_node_next,
+                                             masked_right_node)) { // RIGHT HERE
                 if ((get_node_address(right_node) != tail) && get_confirm_delete(get_node_address(right_node)->next)) {
                     goto SEARCH_AGAIN;
                 } else {
@@ -210,7 +201,6 @@ public:
     void remove(int key) {
         Node *right_node = NULL, *right_node_next = NULL, *left_node = NULL;
         while (true) {
-//            right_node = search_after(index_layer->find(key), key, left_node);
             right_node = get_node_address(search_by_index(key, left_node));
             if ((right_node == tail) || (right_node->key != key)) {
                 printf("wrong return\n");
@@ -219,33 +209,24 @@ public:
             right_node_next = right_node->next;
             if (!get_is_delete(right_node_next)) {
 
-//                printf("right_node key %d, next: %p\n", right_node->key, right_node->next);
 
                 if (__sync_bool_compare_and_swap(&(right_node->next), right_node_next,
                                                  set_is_delete(right_node_next))) {
 
-//                    printf("[success] right_node key %d, next: %p\n", right_node->key, right_node->next);
 
                     modification_counter++;
 
                     break;
                 }
-            }
-            else {
-//                printf("is deleted worong return, target key: %d, found key: %d \n", key, right_node->key);
+            } else {
                 return;
             }
         }
-        // try to physically delete the node
-//        if (!__sync_bool_compare_and_swap(&(left_node->next), right_node, right_node_next)) {
-//            right_node = search_after(head, right_node->key, left_node);
-//        }
         return;// true;
     }
 
     int find(int key) {
         Node *right_node, *left_node;
-//        right_node = search_after(index_layer->find(key), key, left_node);
         right_node = search_by_index(key, left_node);
         if ((right_node == tail) || (right_node->key != key)) {
             return NULL;
@@ -253,7 +234,6 @@ public:
             return right_node->value;
         }
     }
-    //string printlist();
 
     /**
      * Non-thread-safe
@@ -300,36 +280,26 @@ void *background_job(void *ptr) {
 
     while (true) {
         unsigned counter = lockfreeList->modification_counter;
-//        printf("[Background] : %u\n", counter);
 
         if (counter >= REBUILD_THRESHOLD) {
             IndexLayer *old_index_layer = lockfreeList->index_layer;
 
-//            printf("got old index layer\n");
 
             IndexLayer *new_index_layer = new IndexLayer();
             new_index_layer->build(lockfreeList->head, lockfreeList->tail);
-
-//            new_index_layer->print_index_layers();
-
-//            printf("created and built new index layer\n");
 
             lockfreeList->index_layer = new_index_layer;
 
             while (lockfreeList->global_counter
                    != old_index_layer->ongoing_query_counter
                       + new_index_layer->ongoing_query_counter) {
-//                printf("waiting");
                 usleep(1000);
             }
 
             while (old_index_layer->ongoing_query_counter != 0) {
-//                printf("waiting...");
                 usleep(1000);
             }
 
-//            printf("Going to free old index layer\n");
-//            free(old_index_layer);
 
             lockfreeList->modification_counter = 0;
 
